@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Goal Loop API Documentation</title>
+    <meta
+      name="description"
+      content="Goal Loop API documentation: verifier-backed /goal loops for Cursor and other coding agents."
+    />
+    <meta property="og:title" content="Goal Loop API Documentation" />
+    <meta
+      property="og:description"
+      content="Verifier-backed /goal loops for Cursor. Small API, deterministic completion."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://bodecloud.github.io/goal-loop/" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="topbar" aria-label="Primary">
+        <a class="brand" href="#top" aria-label="Goal Loop home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          Goal Loop
+        </a>
+        <div class="nav-links">
+          <a href="#commands">Commands</a>
+          <a href="#contract">Contract</a>
+          <a href="#hook">Hook</a>
+          <a href="https://github.com/bodecloud/goal-loop">GitHub</a>
+        </div>
+      </nav>
+
+      <section id="top" class="hero-grid">
+        <div>
+          <p class="eyebrow">Cursor plugin API docs</p>
+          <h1>Verifier-backed <code>/goal</code> loops for Cursor.</h1>
+          <p class="lede">
+            Goal Loop is intentionally small: describe an objective, define a
+            shell verifier, and let the stop hook keep the agent moving until
+            the verifier passes.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#quickstart">Try it</a>
+            <a class="button" href="https://github.com/bodecloud/goal-loop">View source</a>
+          </div>
+        </div>
+        <aside class="card hero-card" aria-label="Core loop">
+          <ol class="loop-list">
+            <li><span>1</span><strong>Start</strong><code>/goal "Fix build"</code></li>
+            <li><span>2</span><strong>Verify</strong><code>npm run build</code></li>
+            <li><span>3</span><strong>Continue or stop</strong><code>followup_message | {}</code></li>
+          </ol>
+        </aside>
+      </section>
+    </header>
+
+    <main>
+      <section id="what" class="section narrow">
+        <p class="section-kicker">What it does</p>
+        <h2>The verifier is the completion authority.</h2>
+        <p>
+          The agent can write code, but it cannot declare the goal done. Goal
+          Loop runs your verifier after each completed agent turn. Failure
+          becomes the next instruction. Success ends the loop.
+        </p>
+      </section>
+
+      <section id="quickstart" class="section">
+        <div class="section-heading">
+          <p class="section-kicker">Quickstart</p>
+          <h2>One command and one verifier.</h2>
+        </div>
+        <div class="code-panel">
+          <button class="copy-button" data-copy-target="quickstart-code">Copy</button>
+          <pre id="quickstart-code"><code>/goal Fix the app build --verify "npm run build"</code></pre>
+        </div>
+        <p class="muted">
+          Enable Cursor Agent Auto-run for unattended continuation. Without
+          Auto-run, Goal Loop still verifies, but you may need to continue
+          manually.
+        </p>
+      </section>
+
+      <section id="commands" class="section">
+        <div class="section-heading">
+          <p class="section-kicker">Command API</p>
+          <h2>The public surface is four commands.</h2>
+        </div>
+        <div class="command-grid">
+          <article class="card">
+            <h3><code>/goal &lt;objective&gt;</code></h3>
+            <p>Creates an active goal and starts verifier-backed iteration.</p>
+          </article>
+          <article class="card">
+            <h3><code>/plan [objective]</code></h3>
+            <p>Drafts an objective and verifier before activating the loop.</p>
+          </article>
+          <article class="card">
+            <h3><code>/goal-status</code></h3>
+            <p>Shows status, iteration, verifier commands, and the last log path.</p>
+          </article>
+          <article class="card">
+            <h3><code>/goal-abort</code></h3>
+            <p>Marks the current goal aborted so the stop hook returns <code>{}</code>.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="contract" class="section two-column">
+        <div>
+          <p class="section-kicker">Goal contract</p>
+          <h2><code>.cursor/goal/active.json</code></h2>
+          <p>
+            Runtime state is project-local. Commit <code>defaults.json</code>
+            if a repo has a shared verifier; ignore <code>active.json</code>
+            and <code>runs/</code>.
+          </p>
+        </div>
+        <div class="code-panel">
+          <button class="copy-button" data-copy-target="contract-code">Copy</button>
+          <pre id="contract-code"><code>{
+  "version": 1,
+  "status": "active",
+  "objective": "Fix the app build",
+  "verify": {
+    "commands": ["npm run build"],
+    "cwd": ".",
+    "timeout_ms": 600000
+  },
+  "limits": {
+    "max_iterations": 20,
+    "max_wall_ms": 7200000
+  },
+  "iteration": 0,
+  "last_verify": null
+}</code></pre>
+        </div>
+      </section>
+
+      <section id="schema" class="section">
+        <div class="section-heading">
+          <p class="section-kicker">Schema notes</p>
+          <h2>Only the fields you need to operate the loop.</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>objective</code></td>
+                <td>The target the agent works toward.</td>
+              </tr>
+              <tr>
+                <td><code>verify.commands</code></td>
+                <td>Shell commands run sequentially after each completed turn.</td>
+              </tr>
+              <tr>
+                <td><code>limits</code></td>
+                <td>Iteration and wall-clock guardrails against runaway loops.</td>
+              </tr>
+              <tr>
+                <td><code>last_verify.log_path</code></td>
+                <td>The log the agent reads after a failed verifier run.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="hook" class="section two-column">
+        <div>
+          <p class="section-kicker">Stop hook contract</p>
+          <h2>Two outputs.</h2>
+          <p>
+            The hook returns <code>{}</code> when there is no more work for the
+            loop. It returns <code>followup_message</code> when the verifier
+            failed and Cursor should continue.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Failure output</h3>
+          <pre><code>{
+  "followup_message": "Goal Loop verification failed..."
+}</code></pre>
+          <h3>Success output</h3>
+          <pre><code>{}</code></pre>
+        </div>
+      </section>
+
+      <section id="install" class="section">
+        <div class="section-heading">
+          <p class="section-kicker">Install</p>
+          <h2>Use the plugin locally or from the marketplace when published.</h2>
+        </div>
+        <div class="install-grid">
+          <article class="card">
+            <h3>Cursor Agent CLI</h3>
+            <pre><code>cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
+          </article>
+          <article class="card">
+            <h3>Cursor Marketplace</h3>
+            <pre><code>/add-plugin goal-loop</code></pre>
+            <p class="muted">Available after marketplace approval.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="other-agents" class="section narrow">
+        <p class="section-kicker">Other agents</p>
+        <h2>The pattern is portable.</h2>
+        <p>
+          Any agent runner can implement Goal Loop: persist the contract, run
+          the verifier after a turn, feed failure logs back as the next
+          instruction, and stop on success.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Goal Loop v0.1.0</span>
+      <a href="https://github.com/bodecloud/goal-loop">GitHub</a>
+      <a href="https://github.com/bodecloud/goal-loop/blob/main/docs/goal-contract.md">Full contract</a>
+    </footer>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

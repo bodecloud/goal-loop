@@ -38,7 +38,8 @@
   "scripts": {
     "test": "node --test",
     "validate": "node scripts/validate-plugin.mjs",
-    "verify": "npm test && npm run validate"
+    "verify": "npm test && npm run validate",
+    "docs:check": "node scripts/check-site.mjs"
   },
   "engines": {
     "node": ">=18"
