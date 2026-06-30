@@ -1,0 +1,8 @@
+---
+alwaysApply: false
+description: When .cursor/goal/active.json status is active, prefer autonomous iteration until verification passes.
+---
+
+When `.cursor/goal/active.json` exists and has `"status": "active"`, read it before working.
+
+Prefer autonomous iteration toward the objective. Do not claim completion until the configured verifier passes. If the Goal Loop stop hook sends a follow-up, inspect the referenced log and address the root cause before ending the turn again.

@@ -1,0 +1,46 @@
+{
+  "name": "goal-loop",
+  "version": "0.1.0",
+  "description": "Codex-style autonomous goal loops for Cursor and other coding agents.",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bodecloud/goal-loop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bodecloud/goal-loop/issues"
+  },
+  "homepage": "https://github.com/bodecloud/goal-loop#readme",
+  "keywords": [
+    "cursor",
+    "agent",
+    "goal",
+    "automation",
+    "hooks",
+    "verification"
+  ],
+  "files": [
+    ".cursor-plugin/",
+    "agents/",
+    "assets/",
+    "commands/",
+    "docs/",
+    "hooks/",
+    "scripts/",
+    "skills/",
+    "templates/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "validate": "node scripts/validate-plugin.mjs",
+    "verify": "npm test && npm run validate"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

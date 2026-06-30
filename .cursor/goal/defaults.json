@@ -1,0 +1,11 @@
+{
+  "verify": {
+    "commands": ["npm run verify"],
+    "cwd": ".",
+    "timeout_ms": 600000
+  },
+  "limits": {
+    "max_iterations": 20,
+    "max_wall_ms": 7200000
+  }
+}

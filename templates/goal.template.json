@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "status": "active",
+  "objective": "",
+  "verify": {
+    "commands": [],
+    "cwd": ".",
+    "timeout_ms": 600000
+  },
+  "limits": {
+    "max_iterations": 20,
+    "max_wall_ms": 7200000
+  },
+  "completion_promise": null,
+  "started_at": "",
+  "iteration": 0,
+  "last_verify": null
+}
