@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 const manifest = JSON.parse(readFileSync(".cursor-plugin/plugin.json", "utf8"));
 const hooks = JSON.parse(readFileSync("hooks/hooks.json", "utf8"));
+const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 
 const requiredManifestPaths = [
   manifest.logo,
@@ -20,6 +21,9 @@ for (const path of requiredManifestPaths) {
 
 if (manifest.name !== "goal-loop") {
   throw new Error("manifest name must be goal-loop");
+}
+if (pkg.name !== "@bodecloud/goal-loop") {
+  throw new Error("package name must be @bodecloud/goal-loop for GitHub Packages");
 }
 if (manifest.version !== "0.1.0") {
   throw new Error("manifest version must be 0.1.0");

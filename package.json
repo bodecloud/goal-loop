@@ -1,5 +1,5 @@
 {
-  "name": "goal-loop",
+  "name": "@bodecloud/goal-loop",
   "version": "0.1.0",
   "description": "Codex-style autonomous goal loops for Cursor and other coding agents.",
   "type": "module",

@@ -1,0 +1,59 @@
+name: Cursor Marketplace Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  prepare-marketplace-submission:
+    if: ${{ github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Validate Cursor plugin metadata
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('.cursor-plugin/plugin.json', 'utf8'));
+          const required = ['name', 'displayName', 'version', 'description', 'repository', 'hooks', 'commands', 'skills'];
+          for (const key of required) {
+            if (!manifest[key]) throw new Error(`Missing plugin manifest field: ${key}`);
+          }
+          if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(manifest.name)) {
+            throw new Error('Cursor plugin name must be lowercase kebab-case');
+          }
+          for (const path of [manifest.logo, manifest.hooks, manifest.commands, manifest.skills, manifest.agents].filter(Boolean)) {
+            if (!fs.existsSync(path)) throw new Error(`Manifest path does not exist: ${path}`);
+          }
+          console.log(`Cursor plugin ${manifest.name}@${manifest.version} is ready for marketplace submission.`);
+          NODE
+      - name: Create marketplace submission summary
+        run: |
+          mkdir -p dist
+          cat > dist/cursor-marketplace-submission.md <<'EOF'
+          # Cursor Marketplace Submission
+
+          Plugin: Goal Loop
+          Repository: https://github.com/bodecloud/goal-loop
+          Release: ${{ github.event.release.html_url }}
+          Tag: ${{ github.event.release.tag_name }}
+
+          Official Cursor submission page:
+          https://cursor.com/marketplace/publish
+
+          Cursor's current public documentation describes marketplace publishing
+          as a web submission of the public repository URL. This workflow
+          validates the plugin and prepares the release submission artifact.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cursor-marketplace-submission
+          path: dist/cursor-marketplace-submission.md
