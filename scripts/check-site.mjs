@@ -3,22 +3,53 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const siteDir = resolve("site");
-const requiredFiles = ["index.html", "styles.css", "script.js"];
+const requiredFiles = ["index.html", "styles.css", "theme.js", "CNAME"];
 const requiredAnchors = [
   "top",
-  "quickstart",
-  "commands",
+  "model",
+  "setup",
+  "usage",
   "contract",
-  "schema",
-  "hook",
-  "install",
-  "other-agents"
+  "verifier",
+  "limits",
+  "troubleshooting",
+  "docs-map",
+  "checklists",
+  "review",
+  "evidence",
+  "authoring",
+  "adoption",
+  "examples",
+  "backlog"
+];
+const requiredDocs = [
+  "README.md",
+  "docs/index.md",
+  "docs/cursor.md",
+  "docs/goal-contract.md",
+  "docs/verifier-design.md",
+  "docs/evidence-map.md",
+  "docs/examples.md",
+  "docs/operator-checklists.md",
+  "docs/reviewer-guide.md",
+  "docs/authoring-standard.md",
+  "docs/troubleshooting.md",
+  "docs/faq.md",
+  "docs/adoption-playbook.md",
+  "docs/other-agents.md"
 ];
 
 for (const file of requiredFiles) {
   const path = resolve(siteDir, file);
   if (!existsSync(path)) {
     throw new Error(`Missing site file: ${path}`);
+  }
+}
+
+for (const file of requiredDocs) {
+  const path = resolve(file);
+  if (!existsSync(path)) {
+    throw new Error(`Missing required doc file: ${path}`);
   }
 }
 
@@ -50,8 +81,46 @@ for (const link of localLinks) {
   }
 }
 
-if (!html.includes("https://bodecloud.github.io/goal-loop/")) {
+if (!html.includes("https://goal-loop.github.io/")) {
   throw new Error("Missing canonical GitHub Pages URL");
 }
 
-process.stdout.write("Site validation passed.\n");
+const cname = readFileSync(resolve(siteDir, "CNAME"), "utf8").trim();
+if (cname !== "goal-loop.github.io") {
+  throw new Error(`Unexpected CNAME value: ${cname}`);
+}
+
+const readme = readFileSync(resolve("README.md"), "utf8");
+const docLinks = [...readme.matchAll(/\((docs\/[^)]+\.md)\)/g)].map((match) => match[1]);
+for (const link of docLinks) {
+  const target = resolve(link);
+  if (!existsSync(target)) {
+    throw new Error(`Broken README doc link: ${link}`);
+  }
+}
+
+const gitignore = readFileSync(resolve(".gitignore"), "utf8");
+for (const pattern of [
+  ".cursor/goal/active.json",
+  ".cursor/goal/draft.json",
+  ".cursor/goal/runs/"
+]) {
+  if (!gitignore.includes(pattern)) {
+    throw new Error(`Missing runtime-state ignore pattern: ${pattern}`);
+  }
+}
+
+for (const doc of requiredDocs.filter((file) => file.endsWith(".md"))) {
+  const body = readFileSync(resolve(doc), "utf8");
+  const links = [...body.matchAll(/\((?!https?:\/\/|mailto:|#)([^)]+\.(?:md|json|txt))\)/g)].map(
+    (match) => match[1]
+  );
+  for (const link of links) {
+    const target = resolve(dirname(resolve(doc)), link.split("#")[0]);
+    if (!existsSync(target)) {
+      throw new Error(`Broken doc link in ${doc}: ${link}`);
+    }
+  }
+}
+
+process.stdout.write("Site and docs validation passed.\n");

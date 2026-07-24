@@ -1,0 +1,14 @@
+{
+  "name": "minesweeper-dogfood",
+  "version": "1.0.0",
+  "description": "Classic Minesweeper dogfood example for Goal Loop",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minesweeper</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Minesweeper</h1>
+        <p>Classic beginner, intermediate, and expert boards with flags, chord reveal, timer, and mine counter.</p>
+      </header>
+
+      <section class="controls">
+        <label>
+          Difficulty
+          <select id="difficulty"></select>
+        </label>
+        <button id="new-game" type="button">New Game</button>
+      </section>
+
+      <section class="hud">
+        <div id="mine-counter" class="counter">010</div>
+        <button id="face" type="button" class="face" aria-label="Reset game">🙂</button>
+        <div id="timer" class="counter">000</div>
+      </section>
+
+      <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
+      <p class="status-line">Status: <span id="status">ready</span></p>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

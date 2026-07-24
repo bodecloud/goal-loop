@@ -5,3 +5,4 @@ coverage/
 .cursor/goal/runs/
 .DS_Store
 *.log
+agentdecompile_projects/

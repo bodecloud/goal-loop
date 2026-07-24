@@ -1,147 +1,301 @@
 # Goal Loop
 
-Bring Codex-style goal loops to Cursor and other coding agents.
+Goal Loop is a small Cursor plugin that gives non-Codex agents a goal-like working mode backed by deterministic shell verification.
 
-Goal Loop keeps an agent working until your verifier passes. You describe the objective, Goal Loop writes a project-local goal file, and a Cursor stop hook reruns your verification command after each agent turn. If verification fails, the hook sends the agent a focused follow-up with the failure log. If verification passes, the loop stops.
+The product is intentionally narrow:
 
-The important detail: the agent is not trusted to self-declare success. Your shell verifier is the authority.
+- One primary command: `/goal`
+- One project-local runtime contract: `.cursor/goal/active.json`
+- One stop-hook loop that reruns verifier commands after each completed turn
+- One rule that matters: the verifier, not the agent's prose, decides whether the work is done
 
-## Why Use It
+If you want an agent to keep working until `npm test`, `npm run build`, a smoke script, or another concrete command passes, Goal Loop is the mechanism. If you want a broad orchestration platform, a planning OS, or a marketplace of agent behaviors, that is outside the current product boundary.
 
-- Keep long-running agent work moving without manually saying "continue".
-- Make completion deterministic with commands like `npm test`, `npm run build`, or a custom smoke test.
-- Keep runtime state in the project so every loop is inspectable and abortable.
-- Reuse the same goal contract outside Cursor in custom wrappers or other agent environments.
+## What Goal Loop Actually Does
+
+Goal Loop turns a normal agent objective into a bounded loop:
+
+1. `/goal` writes a project-local contract to `.cursor/goal/active.json`.
+2. The agent works on that objective.
+3. Cursor runs the Goal Loop stop hook after each completed agent turn.
+4. The hook runs the configured verifier commands in the shell.
+5. If verification fails, the hook returns a `followup_message` containing the failure context and log path.
+6. If verification passes, the hook marks the goal `completed` and returns `{}`.
+
+That is the product.
+
+It does not invent new agent cognition. It does not prove semantic correctness beyond what your verifier covers. It does not replace good scoping, good tests, or good operator judgment.
+
+## Why It Exists
+
+Most agent loops fail in one of two ways:
+
+- The agent stops too early because it "looks done".
+- The operator has to keep manually saying "continue" after every failed test or build.
+
+Goal Loop addresses both by moving completion authority out of the assistant's narrative and into a shell verifier that can run on every turn.
+
+That makes it useful for:
+
+- Build repair
+- Focused test repair
+- Static checks
+- Smoke probes
+- File existence or output generation proof
+- Any other bounded task where a shell command can decide pass or fail
+
+## What It Is Not
+
+Goal Loop is not:
+
+- A general autonomous agent platform
+- A task graph or multi-agent orchestrator
+- A deployment system
+- A replacement for CI
+- A semantic correctness guarantee
+- A promise that an agent will succeed without good verification
+
+The current v0.1.0 release is deliberately conservative. It solves one problem well: keep an agent iterating until a real verifier passes or the loop stops.
+
+## Mental Model
+
+Treat Goal Loop as a local, inspectable contract between four pieces:
+
+- The operator: chooses the objective and verifier
+- The command surface: writes or inspects goal state
+- The stop hook: enforces verification after each turn
+- The agent: performs the work but is not trusted to self-certify completion
+
+The contract lives in the project, not in the plugin install directory. That matters because it keeps state visible, reviewable, and portable to other wrappers.
+
+## Runtime Layout
+
+Goal Loop stores mutable state in the active project:
+
+```text
+.cursor/goal/
+├── active.json
+├── draft.json
+├── defaults.json
+├── progress.md
+└── runs/
+```
+
+- `active.json`: the live goal contract used by the stop hook
+- `draft.json`: a planned but not activated goal
+- `defaults.json`: shared verifier defaults that a repo can commit
+- `progress.md`: optional human-readable checklist
+- `runs/`: verifier logs and hook error logs
+
+Recommended git treatment:
+
+- Commit `defaults.json` if the repo has a stable shared verifier
+- Ignore `active.json`, `draft.json`, and `runs/`
+- Keep `progress.md` optional and project-specific
 
 ## Install
 
 ### Cursor Marketplace
 
-After the plugin is published:
+After marketplace publication:
 
-```bash
+```text
 /add-plugin goal-loop
 ```
 
-### Local Development Install
+This repository does not prove current marketplace publication state. It documents the intended install path if publication exists.
 
-Clone the repository and install it through Cursor's local plugin flow:
+### Local Development Install
 
 ```bash
 git clone https://github.com/bodecloud/goal-loop.git
 cd goal-loop
 ```
 
-For Cursor Agent CLI experiments, load the local plugin directory explicitly:
+For Cursor Agent CLI experiments:
 
 ```bash
 cursor-agent --plugin-dir "$PWD" --workspace /path/to/your/project
 ```
 
-For the Cursor IDE, use Cursor's current local plugin development workflow or install from the marketplace after publication.
+For Cursor IDE local development, use Cursor's current local plugin workflow. This repository documents the plugin shape and local CLI loading path directly; it does not independently prove the current IDE-side local-plugin UX.
 
 ## Quickstart
 
-1. Enable Cursor Agent Auto-run.
-2. Add a project default verifier:
+1. Enable Cursor Agent Auto-run if you want unattended continuation.
+2. Optionally define a project default verifier in `.cursor/goal/defaults.json`:
 
    ```json
    {
      "verify": {
-       "commands": ["npm run build"]
+       "commands": ["npm run build"],
+       "cwd": ".",
+       "timeout_ms": 600000
+     },
+     "limits": {
+       "max_iterations": 20,
+       "max_wall_ms": 7200000
      }
    }
    ```
 
-   Save it at `.cursor/goal/defaults.json`.
-
-3. Start a goal:
+3. Start a goal with an explicit verifier:
 
    ```text
    /goal Fix the failing auth tests --verify "npm test -- --testPathPattern=auth"
    ```
 
-4. Let Cursor work. After each agent turn, Goal Loop runs the verifier.
+4. Let the agent work.
+5. After each completed turn, Goal Loop reruns the verifier.
+6. Use `/goal-status` to inspect current state.
+7. Use `/goal-abort` to stop the loop early.
 
-5. Check status any time:
-
-   ```text
-   /goal-status
-   ```
-
-6. Stop early:
-
-   ```text
-   /goal-abort
-   ```
-
-## How It Works
-
-```text
-User starts /goal
-  -> command writes .cursor/goal/active.json
-  -> agent works on the objective
-  -> Cursor stop hook runs verifier commands
-  -> verifier passes: hook returns {}
-  -> verifier fails: hook returns followup_message with log tail
-  -> Cursor Auto-run submits the follow-up
-```
-
-Runtime state lives in the project:
-
-```text
-.cursor/goal/
-├── active.json          # current goal contract, gitignored
-├── draft.json           # optional planned goal, gitignored
-├── defaults.json        # shared project verifier defaults, safe to commit
-├── progress.md          # optional checklist
-└── runs/                # verifier logs, gitignored
-```
-
-## Commands
+## Command Surface
 
 | Command | Purpose |
 | --- | --- |
 | `/goal <objective>` | Start an active verifier-backed goal loop. |
-| `/plan [objective]` | Draft the objective and verifier before activating. |
-| `/goal-status` | Show active goal state and last verifier result. |
-| `/goal-abort` | Stop the active loop. |
+| `/plan [objective]` | Draft objective and verifier before activation. |
+| `/goal-status` | Read the active goal and last verifier result. |
+| `/goal-abort` | Mark the active goal aborted, or remove it with `--remove`. |
+
+## Lifecycle
+
+### `/goal`
+
+The command handler:
+
+- parses the objective
+- collects `--verify` commands
+- falls back to `.cursor/goal/defaults.json` if no verifier is passed
+- writes `.cursor/goal/active.json`
+- tells the agent to load the `cursor-goal` skill
+
+### Agent turn
+
+The agent works on the objective using the active goal contract as its source of truth.
+
+### Stop hook
+
+At the end of a completed turn, Cursor runs:
+
+```bash
+node ${CURSOR_PLUGIN_ROOT}/hooks/goal-stop.mjs
+```
+
+The hook:
+
+- ignores non-completed stop events
+- reads and validates `.cursor/goal/active.json`
+- increments `iteration`
+- aborts if iteration or wall-clock limits are exceeded
+- runs verifier commands sequentially
+- writes a run log
+- updates `last_verify`
+- returns `{}` on success
+- returns `{ "followup_message": "..." }` on failure
+
+### Continuation
+
+If Auto-run is enabled, Cursor submits the `followup_message` as the next instruction. Without Auto-run, Goal Loop still verifies honestly, but human continuation may be required.
+
+## Verification Philosophy
+
+Goal Loop is only as good as the verifier you choose.
+
+Good verifiers are:
+
+- deterministic
+- local to the stated objective
+- cheap enough to rerun every turn
+- strong enough to prove the intended result
+
+Examples:
+
+- `npm run build`
+- `npm test -- --testPathPattern=auth`
+- `cargo test login_flow`
+- `test -f generated/output.json`
+- `scripts/smoke-check.sh`
+
+Bad verifiers are:
+
+- vague promises that cannot fail mechanically
+- commands unrelated to the user's actual request
+- massive, flaky end-to-end suites for tiny local changes unless they are truly the right gate
+- checks that pass while the real failure surface remains untested
+
+The loop does not fix a weak verifier. It only reruns it faithfully.
 
 ## Safety Model
 
-Goal Loop uses two loop limits:
+Goal Loop uses multiple guardrails:
 
-- Cursor hook `loop_limit: 20`
-- Goal contract `limits.max_iterations: 20`
+- `hooks/hooks.json` sets `loop_limit: 20`
+- `active.json` sets `limits.max_iterations`
+- `active.json` sets `limits.max_wall_ms`
+- each verifier command has `verify.timeout_ms`
+- hook crashes fail open by returning `{}` and writing `hook-errors.log`
 
-It also has a wall-clock limit and per-command timeout. Hook failures fail open by returning `{}` and writing `.cursor/goal/runs/hook-errors.log`, so a broken hook should not trap your agent in a loop.
+That last point is intentional: a broken hook should not trap the agent in a bad loop.
 
-Verifier commands are shell commands. Treat them like any other command you ask an agent to run. Prefer read-only or deterministic checks: tests, builds, static checks, smoke probes, or file existence checks.
+## Product Boundary
 
-## Use Outside Cursor
+Current v0.1.0 scope:
 
-Goal Loop is Cursor-first, but the contract is simple:
+- verifier-backed `/goal` loop
+- draft and status commands
+- project-local JSON contract
+- stop hook continuation via `followup_message`
+- portable pattern for other agents
 
-1. Store an objective and verifier in `.cursor/goal/active.json`.
-2. Let the agent work.
-3. Run the verifier at the end of each turn.
-4. If it fails, feed the log back as the next instruction.
-5. If it passes, stop.
+Current v0.1.0 non-scope:
 
-See [docs/other-agents.md](docs/other-agents.md) for adaptation notes.
+- richer planner workflows
+- multiple simultaneous active goals
+- semantic diff understanding
+- custom UI dashboards
+- non-shell verifier backends
+- distributed orchestration
 
-## Documentation
+## Documentation Map
 
-- [Cursor setup](docs/cursor.md)
-- [Goal contract](docs/goal-contract.md)
-- [Examples](docs/examples.md)
-- [Other agents](docs/other-agents.md)
+- [Documentation index](docs/index.md)
+- [Cursor setup and operating guide](docs/cursor.md)
+- [Goal contract and schema semantics](docs/goal-contract.md)
+- [Verifier design guidance](docs/verifier-design.md)
+- [Implementation evidence map](docs/evidence-map.md)
+- [Examples and usage patterns](docs/examples.md)
+- [Operator checklists](docs/operator-checklists.md)
+- [Reviewer guide](docs/reviewer-guide.md)
+- [Documentation authoring standard](docs/authoring-standard.md)
+- [Troubleshooting and failure analysis](docs/troubleshooting.md)
+- [Decision guide and FAQ](docs/faq.md)
+- [Adoption playbook](docs/adoption-playbook.md)
+- [Adapting the pattern to other agents](docs/other-agents.md)
+
+## Claim Boundaries
+
+What this repository directly proves:
+
+- current plugin manifest shape
+- current command, hook, and state-file behavior
+- current test-covered loop behavior in this repo
+- current static documentation site structure and local serving behavior
+
+What it does not directly prove:
+
+- current marketplace publication state
+- current Cursor IDE local-plugin UX beyond the repo-documented plugin shape
+- that any chosen verifier is semantically sufficient for every human request
+- exact conformance to any external guide that is not present in this repo context
 
 ## Development
 
 ```bash
 npm test
 npm run validate
+npm run docs:check
 npm run verify
 ```
 
