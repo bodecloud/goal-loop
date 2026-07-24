@@ -1,127 +1,232 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="xp">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Goal Loop API Documentation</title>
+    <title>Goal Loop Docs</title>
     <meta
       name="description"
-      content="Goal Loop API documentation: verifier-backed /goal loops for Cursor and other coding agents."
+      content="Goal Loop documentation: a small /goal command and deterministic verifier loop for Cursor and other coding agents."
     />
-    <meta property="og:title" content="Goal Loop API Documentation" />
+    <meta property="og:title" content="Goal Loop Docs" />
     <meta
       property="og:description"
-      content="Verifier-backed /goal loops for Cursor. Small API, deterministic completion."
+      content="Goal Loop gives non-Codex agents goal-like behavior backed by a shell verifier."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://bodecloud.github.io/goal-loop/" />
+    <meta property="og:url" content="https://goal-loop.github.io/" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="hero">
-      <nav class="topbar" aria-label="Primary">
-        <a class="brand" href="#top" aria-label="Goal Loop home">
-          <span class="brand-mark" aria-hidden="true"></span>
-          Goal Loop
-        </a>
-        <div class="nav-links">
-          <a href="#commands">Commands</a>
-          <a href="#contract">Contract</a>
-          <a href="#hook">Hook</a>
-          <a href="https://github.com/bodecloud/goal-loop">GitHub</a>
-        </div>
-      </nav>
+    <a class="skip-link" href="#main">Skip to content</a>
 
-      <section id="top" class="hero-grid">
-        <div>
-          <p class="eyebrow">Cursor plugin API docs</p>
-          <h1>Verifier-backed <code>/goal</code> loops for Cursor.</h1>
-          <p class="lede">
-            Goal Loop is intentionally small: describe an objective, define a
-            shell verifier, and let the stop hook keep the agent moving until
-            the verifier passes.
-          </p>
-          <div class="actions">
-            <a class="button primary" href="#quickstart">Try it</a>
-            <a class="button" href="https://github.com/bodecloud/goal-loop">View source</a>
+    <div class="desktop-shell">
+      <header class="desktop-chrome" id="top">
+        <div class="chrome-row">
+          <div class="brand-block" aria-label="Goal Loop">
+            <span class="brand-icon" aria-hidden="true"></span>
+            <div>
+              <p class="micro-label">Goal Loop</p>
+              <h1><code>/goal</code> for agents that need proof, not self-reported success.</h1>
+            </div>
           </div>
-        </div>
-        <aside class="card hero-card" aria-label="Core loop">
-          <ol class="loop-list">
-            <li><span>1</span><strong>Start</strong><code>/goal "Fix build"</code></li>
-            <li><span>2</span><strong>Verify</strong><code>npm run build</code></li>
-            <li><span>3</span><strong>Continue or stop</strong><code>followup_message | {}</code></li>
-          </ol>
-        </aside>
-      </section>
-    </header>
 
-    <main>
-      <section id="what" class="section narrow">
-        <p class="section-kicker">What it does</p>
-        <h2>The verifier is the completion authority.</h2>
-        <p>
-          The agent can write code, but it cannot declare the goal done. Goal
-          Loop runs your verifier after each completed agent turn. Failure
-          becomes the next instruction. Success ends the loop.
-        </p>
-      </section>
+          <form class="theme-switcher" aria-label="Theme switcher">
+            <label for="theme-select">Shell</label>
+            <select id="theme-select" name="theme">
+              <option value="nt">Windows NT</option>
+              <option value="2000">Windows 2000</option>
+              <option value="xp" selected>Windows XP</option>
+              <option value="7">Windows 7</option>
+            </select>
+          </form>
+        </div>
 
-      <section id="quickstart" class="section">
-        <div class="section-heading">
-          <p class="section-kicker">Quickstart</p>
-          <h2>One command and one verifier.</h2>
-        </div>
-        <div class="code-panel">
-          <button class="copy-button" data-copy-target="quickstart-code">Copy</button>
-          <pre id="quickstart-code"><code>/goal Fix the app build --verify "npm run build"</code></pre>
-        </div>
-        <p class="muted">
-          Enable Cursor Agent Auto-run for unattended continuation. Without
-          Auto-run, Goal Loop still verifies, but you may need to continue
-          manually.
-        </p>
-      </section>
+        <div class="desktop-panels">
+          <section class="window intro-window" aria-labelledby="overview-title">
+            <div class="title-bar">
+              <span>OVERVIEW.TXT</span>
+              <span class="title-actions" aria-hidden="true">_ □ ×</span>
+            </div>
+            <div class="window-body">
+              <p class="micro-label">What Goal Loop is</p>
+              <h2 id="overview-title">A small verifier-backed continuation loop.</h2>
+              <p>
+                Goal Loop gives Cursor and other coding agents a bounded working mode:
+                write an objective to a project-local contract, run shell verification
+                after each completed turn, continue only when verification fails, and
+                stop only when verification passes or the loop aborts.
+              </p>
+              <p>
+                The key rule is simple: the agent does not decide when the work is
+                done. The verifier does.
+              </p>
+              <div class="cta-row">
+                <a class="shell-button primary" href="#usage">Open Usage</a>
+                <a class="shell-button" href="https://github.com/bodecloud/goal-loop">View Repo</a>
+              </div>
+            </div>
+          </section>
 
-      <section id="commands" class="section">
-        <div class="section-heading">
-          <p class="section-kicker">Command API</p>
-          <h2>The public surface is four commands.</h2>
+          <aside class="window status-window" aria-labelledby="boundary-title">
+            <div class="title-bar">
+              <span>BOUNDARY.INI</span>
+              <span class="title-actions" aria-hidden="true">_ □ ×</span>
+            </div>
+            <div class="window-body">
+              <h2 id="boundary-title">Current product boundary</h2>
+              <ul class="checklist">
+                <li>Primary command: <code>/goal</code></li>
+                <li>State file: <code>.cursor/goal/active.json</code></li>
+                <li>Verifier commands run in the shell</li>
+                <li>Failure returns <code>followup_message</code></li>
+                <li>Success or limits stop the loop</li>
+              </ul>
+              <p class="small-note">
+                v0.1.0 is not an agent platform, planner OS, dashboard, or orchestration
+                stack. It is a narrow completion loop.
+              </p>
+            </div>
+          </aside>
         </div>
-        <div class="command-grid">
-          <article class="card">
-            <h3><code>/goal &lt;objective&gt;</code></h3>
-            <p>Creates an active goal and starts verifier-backed iteration.</p>
-          </article>
-          <article class="card">
-            <h3><code>/plan [objective]</code></h3>
-            <p>Drafts an objective and verifier before activating the loop.</p>
-          </article>
-          <article class="card">
-            <h3><code>/goal-status</code></h3>
-            <p>Shows status, iteration, verifier commands, and the last log path.</p>
-          </article>
-          <article class="card">
-            <h3><code>/goal-abort</code></h3>
-            <p>Marks the current goal aborted so the stop hook returns <code>{}</code>.</p>
-          </article>
-        </div>
-      </section>
+      </header>
 
-      <section id="contract" class="section two-column">
-        <div>
-          <p class="section-kicker">Goal contract</p>
-          <h2><code>.cursor/goal/active.json</code></h2>
-          <p>
-            Runtime state is project-local. Commit <code>defaults.json</code>
-            if a repo has a shared verifier; ignore <code>active.json</code>
-            and <code>runs/</code>.
-          </p>
-        </div>
-        <div class="code-panel">
-          <button class="copy-button" data-copy-target="contract-code">Copy</button>
-          <pre id="contract-code"><code>{
+      <main id="main" class="workspace">
+        <section class="window section-window" id="model" aria-labelledby="model-title">
+          <div class="title-bar">
+            <span>MODEL</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="model-title">What problem this solves</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Problem 1: premature agent completion</h3>
+                <p>
+                  Agents often stop when the work merely looks done. Goal Loop moves
+                  completion authority into a verifier command that can fail mechanically.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Problem 2: manual "continue" overhead</h3>
+                <p>
+                  With Auto-run enabled, failed verification becomes the next instruction
+                  automatically, so the operator does not need to keep nudging the agent.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Problem 3: hidden runtime state</h3>
+                <p>
+                  Goal Loop keeps state and logs in the project so every loop remains
+                  inspectable and portable.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="setup" aria-labelledby="setup-title">
+          <div class="title-bar">
+            <span>SETUP</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="setup-title">Install and workspace setup</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>1. Clone or install</h3>
+                <pre><code>git clone https://github.com/bodecloud/goal-loop.git
+cd goal-loop</code></pre>
+                <pre><code>cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
+                <p class="small-note">
+                  This repo proves the local plugin shape and CLI loading path. It does
+                  not itself prove current marketplace availability or the exact current
+                  Cursor IDE local-plugin UX.
+                </p>
+              </article>
+
+              <article class="property-card">
+                <h3>2. Optional project defaults</h3>
+                <pre><code>{
+  "verify": {
+    "commands": ["npm run build"],
+    "cwd": ".",
+    "timeout_ms": 600000
+  },
+  "limits": {
+    "max_iterations": 20,
+    "max_wall_ms": 7200000
+  }
+}</code></pre>
+                <p>Save that in <code>.cursor/goal/defaults.json</code>.</p>
+              </article>
+
+              <article class="property-card">
+                <h3>3. Auto-run matters</h3>
+                <p>
+                  Goal Loop still verifies without Auto-run, but unattended continuation
+                  depends on Cursor Agent Auto-run being enabled.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="usage" aria-labelledby="usage-title">
+          <div class="title-bar">
+            <span>USAGE</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="usage-title">Shortest useful path</h2>
+            <div class="two-column">
+              <div>
+                <p class="lead-line">Start with one clear objective and one real verifier:</p>
+                <pre><code>/goal "Fix build" --verify "npm run build"</code></pre>
+                <ol class="step-list">
+                  <li>The command writes <code>.cursor/goal/active.json</code>.</li>
+                  <li>The agent works on the objective.</li>
+                  <li>The stop hook runs after a completed turn.</li>
+                  <li>The verifier runs in the shell.</li>
+                  <li>Failure returns a log-backed <code>followup_message</code>.</li>
+                  <li>Success marks the goal completed and returns <code>{}</code>.</li>
+                </ol>
+              </div>
+              <div class="property-card">
+                <h3>Support commands</h3>
+                <dl class="inline-defs">
+                  <div>
+                    <dt><code>/plan [objective]</code></dt>
+                    <dd>Draft the objective and verifier without activating the loop.</dd>
+                  </div>
+                  <div>
+                    <dt><code>/goal-status</code></dt>
+                    <dd>Inspect the active objective, iteration, verifier, and last log path.</dd>
+                  </div>
+                  <div>
+                    <dt><code>/goal-abort</code></dt>
+                    <dd>Abort the loop, preserving or removing state depending on intent.</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="contract" aria-labelledby="contract-title">
+          <div class="title-bar">
+            <span>ACTIVE.JSON</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="contract-title">The runtime contract</h2>
+            <p>
+              Goal Loop is powered by one project-local JSON file. It is not just
+              metadata; it is the state machine the command, hook, and agent all read.
+            </p>
+            <div class="two-column">
+              <pre><code>{
   "version": 1,
   "status": "active",
   "objective": "Fix the app build",
@@ -134,102 +239,431 @@
     "max_iterations": 20,
     "max_wall_ms": 7200000
   },
+  "completion_promise": null,
+  "started_at": "2026-06-30T00:00:00.000Z",
   "iteration": 0,
   "last_verify": null
 }</code></pre>
-        </div>
-      </section>
 
-      <section id="schema" class="section">
-        <div class="section-heading">
-          <p class="section-kicker">Schema notes</p>
-          <h2>Only the fields you need to operate the loop.</h2>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Purpose</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>objective</code></td>
-                <td>The target the agent works toward.</td>
-              </tr>
-              <tr>
-                <td><code>verify.commands</code></td>
-                <td>Shell commands run sequentially after each completed turn.</td>
-              </tr>
-              <tr>
-                <td><code>limits</code></td>
-                <td>Iteration and wall-clock guardrails against runaway loops.</td>
-              </tr>
-              <tr>
-                <td><code>last_verify.log_path</code></td>
-                <td>The log the agent reads after a failed verifier run.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>Purpose</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>objective</code></td>
+                    <td>The human target the agent is working toward.</td>
+                  </tr>
+                  <tr>
+                    <td><code>verify.commands</code></td>
+                    <td>Shell commands rerun after each completed turn.</td>
+                  </tr>
+                  <tr>
+                    <td><code>verify.cwd</code></td>
+                    <td>Working directory used by verifier command execution.</td>
+                  </tr>
+                  <tr>
+                    <td><code>limits</code></td>
+                    <td>Guardrails against runaway looping.</td>
+                  </tr>
+                  <tr>
+                    <td><code>last_verify</code></td>
+                    <td>Latest verifier result, exit codes, and log path.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
 
-      <section id="hook" class="section two-column">
-        <div>
-          <p class="section-kicker">Stop hook contract</p>
-          <h2>Two outputs.</h2>
-          <p>
-            The hook returns <code>{}</code> when there is no more work for the
-            loop. It returns <code>followup_message</code> when the verifier
-            failed and Cursor should continue.
-          </p>
-        </div>
-        <div class="card">
-          <h3>Failure output</h3>
-          <pre><code>{
-  "followup_message": "Goal Loop verification failed..."
-}</code></pre>
-          <h3>Success output</h3>
-          <pre><code>{}</code></pre>
-        </div>
-      </section>
+        <section class="window section-window" id="verifier" aria-labelledby="verifier-title">
+          <div class="title-bar">
+            <span>VERIFIER</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="verifier-title">Choosing a verifier that actually proves the request</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Good verifier traits</h3>
+                <ul class="checklist">
+                  <li>Deterministic</li>
+                  <li>Relevant to the user's real request</li>
+                  <li>Cheap enough to rerun often</li>
+                  <li>Strong enough to prove the intended outcome</li>
+                </ul>
+              </article>
+              <article class="property-card">
+                <h3>Good fits</h3>
+                <pre><code>npm run build
+npm test -- --testPathPattern=auth
+scripts/smoke-check.sh
+test -f generated/report.json</code></pre>
+              </article>
+              <article class="property-card">
+                <h3>Bad fits</h3>
+                <p>
+                  Lint for a runtime bug, file existence for a semantic rewrite, or a
+                  flaky network probe for a deterministic local fix. The loop will only
+                  be as honest as the verifier you choose.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
 
-      <section id="install" class="section">
-        <div class="section-heading">
-          <p class="section-kicker">Install</p>
-          <h2>Use the plugin locally or from the marketplace when published.</h2>
+        <section class="window section-window" id="limits" aria-labelledby="limits-title">
+          <div class="title-bar">
+            <span>LIMITS</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="limits-title">Stop conditions and failure behavior</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Success</h3>
+                <p>
+                  When every verifier command exits cleanly, the hook marks the goal
+                  <code>completed</code> and returns <code>{}</code>.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Failure continuation</h3>
+                <p>
+                  When verification fails, the hook writes a numbered run log, updates
+                  <code>last_verify</code>, and returns a <code>followup_message</code>
+                  containing a log tail.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Abort paths</h3>
+                <p>
+                  Goals abort through <code>/goal-abort</code>, iteration limit
+                  exhaustion, or wall-clock limit exhaustion.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Fail-open hook errors</h3>
+                <p>
+                  Unexpected hook errors write
+                  <code>.cursor/goal/runs/hook-errors.log</code> and return
+                  <code>{}</code> so a broken hook does not trap the agent.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="troubleshooting" aria-labelledby="troubleshooting-title">
+          <div class="title-bar">
+            <span>TROUBLESHOOT</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="troubleshooting-title">First places to inspect when behavior looks wrong</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Check runtime state first</h3>
+                <ul class="checklist">
+                  <li><code>.cursor/goal/active.json</code></li>
+                  <li><code>.cursor/goal/defaults.json</code></li>
+                  <li><code>.cursor/goal/runs/</code></li>
+                  <li><code>last_verify.log_path</code></li>
+                </ul>
+              </article>
+              <article class="property-card">
+                <h3>If the loop stops after one failure</h3>
+                <p>
+                  Check whether Cursor Agent Auto-run is enabled. Goal Loop can emit the
+                  continuation payload, but Cursor still needs to submit it.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>If the verifier passes but the user is still unhappy</h3>
+                <p>
+                  That usually means the verifier was too weak for the actual request,
+                  not that the loop disobeyed its contract.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="docs-map" aria-labelledby="docs-map-title">
+          <div class="title-bar">
+            <span>DOCS MAP</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="docs-map-title">How to read the full docs set</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Using it in Cursor</h3>
+                <p>
+                  Start with the Cursor operating guide, then read verifier design and
+                  examples. That sequence explains setup, proof design, and real usage
+                  in the order most operators actually need.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Understanding the contract</h3>
+                <p>
+                  Read the goal contract and verifier design docs together. The schema
+                  explains structure, but the verifier doc explains why the contract is
+                  shaped around proof authority instead of assistant judgment.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Evaluating adoption</h3>
+                <p>
+                  Read the decision guide and FAQ first. The key question is not whether
+                  Goal Loop can continue; it is whether its proof model matches your
+                  workflow and failure surface.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="checklists" aria-labelledby="checklists-title">
+          <div class="title-bar">
+            <span>CHECKLISTS</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="checklists-title">The compact runbook</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Before starting a goal</h3>
+                <p>
+                  Confirm the objective is bounded, the verifier matches the real request,
+                  and Auto-run is configured if unattended continuation is expected.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>When a loop keeps failing</h3>
+                <p>
+                  Inspect the active contract, defaults, numbered run logs, and
+                  hook-errors log before changing tactics. Repetition without inspection
+                  usually means the proof surface or scope is wrong.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>When a verifier passes but feels wrong</h3>
+                <p>
+                  Re-evaluate whether the verifier actually proved the user's request or
+                  only a narrow proxy such as build health or file existence.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="review" aria-labelledby="review-title">
+          <div class="title-bar">
+            <span>REVIEW</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="review-title">Review the proof model, not just the outcome summary</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Review the objective</h3>
+                <p>
+                  Check that the active objective is bounded, aligned to the real ask,
+                  and not a vague catch-all that the verifier can never honestly prove.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Review the verifier</h3>
+                <p>
+                  Ask whether the verifier actually proves the request, whether it is too
+                  broad or too weak, and whether it will produce actionable failure output.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Review success claims narrowly</h3>
+                <p>
+                  A passing verifier proves only its own surface. Healthy review means
+                  matching the claimed success to that proof surface and not inflating it.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="evidence" aria-labelledby="evidence-title">
+          <div class="title-bar">
+            <span>EVIDENCE</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="evidence-title">The docs now point back to implementation proof</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Behavior claims map to code</h3>
+                <p>
+                  The implementation evidence map ties core documentation claims to the
+                  current hook, contract, CLI, and plugin files rather than leaving them
+                  as unsupported prose.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Critical claims map to tests</h3>
+                <p>
+                  Passing verifier completion, failing verifier continuation, active goal
+                  validation, abort behavior, and fail-open hook handling are all traced
+                  to current test coverage.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Limits stay explicit</h3>
+                <p>
+                  The evidence map also marks what the docs do not prove, so the repo
+                  stays honest about boundaries like marketplace state or missing external guides.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="authoring" aria-labelledby="authoring-title">
+          <div class="title-bar">
+            <span>AUTHORING</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="authoring-title">Keep the docs strict, not just verbose</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Prefer evidence over tone</h3>
+                <p>
+                  Future docs changes should be traceable to current repo behavior,
+                  bounded where necessary, and explicit about what the product does not prove.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Prefer judgment over filler</h3>
+                <p>
+                  Good docs in this repo teach how to choose, review, and debug proof
+                  surfaces. They should not drift back into generic productivity rhetoric.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Prefer fewer claims, better defended</h3>
+                <p>
+                  The maintainer standard is smaller product claims, clearer operator
+                  guidance, and stricter honesty about what the current repo actually proves.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="adoption" aria-labelledby="adoption-title">
+          <div class="title-bar">
+            <span>ADOPTION</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="adoption-title">Adopt it like a verifier discipline, not a magic autonomy switch</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Start small</h3>
+                <p>
+                  Begin with build repair, focused tests, or simple file-proof tasks.
+                  Do not start adoption with the flakiest or most subjective work in the repo.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Decide defaults deliberately</h3>
+                <p>
+                  Commit <code>.cursor/goal/defaults.json</code> only when the repo truly
+                  has a shared baseline verifier. Otherwise prefer explicit
+                  <code>--verify</code> per goal.
+                </p>
+              </article>
+              <article class="property-card">
+                <h3>Keep state treatment clear</h3>
+                <p>
+                  Shared conventions belong in committed files. Live loop state and run
+                  logs belong in ignored files. That separation is part of the operating model.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window" id="examples" aria-labelledby="examples-title">
+          <div class="title-bar">
+            <span>EXAMPLES</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="examples-title">Example goal shapes</h2>
+            <div class="property-sheet">
+              <article class="property-card">
+                <h3>Build repair</h3>
+                <pre><code>/goal "Fix build" --verify "npm run build"</code></pre>
+              </article>
+              <article class="property-card">
+                <h3>Targeted regression</h3>
+                <pre><code>/goal "Repair auth tests" --verify "npm test -- --testPathPattern=auth"</code></pre>
+              </article>
+              <article class="property-card">
+                <h3>Sequential proof</h3>
+                <pre><code>/goal "Finish release fix" --verify "npm test" --verify "npm run build"</code></pre>
+              </article>
+              <article class="property-card">
+                <h3>Bootstrapping proof</h3>
+                <pre><code>/goal "Create proof file" --verify "test -f .cursor/goal/proof.txt"</code></pre>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="window section-window backlog-window" id="backlog" aria-labelledby="backlog-title">
+          <div class="title-bar">
+            <span>NON-SCOPE.TXT</span>
+            <span class="title-actions" aria-hidden="true">_ □ ×</span>
+          </div>
+          <div class="window-body">
+            <h2 id="backlog-title">What this site is deliberately not promising</h2>
+            <ul class="checklist">
+              <li>No new agent platform or orchestration layer</li>
+              <li>No dashboard or workflow marketplace</li>
+              <li>No claim that verifier success proves anything outside the verifier surface</li>
+              <li>No promise that weak or flaky verification will become trustworthy by repetition</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+
+      <nav class="taskbar" aria-label="Site sections">
+        <a class="start-button" href="#top">Start</a>
+        <div class="taskbar-links">
+          <a href="#model">Model</a>
+          <a href="#setup">Setup</a>
+          <a href="#usage">Usage</a>
+          <a href="#contract">Contract</a>
+          <a href="#verifier">Verifier</a>
+          <a href="#limits">Limits</a>
+          <a href="#troubleshooting">Troubleshoot</a>
+          <a href="#docs-map">Docs Map</a>
+          <a href="#checklists">Checklists</a>
+          <a href="#review">Review</a>
+          <a href="#evidence">Evidence</a>
+          <a href="#authoring">Authoring</a>
+          <a href="#adoption">Adoption</a>
+          <a href="#examples">Examples</a>
         </div>
-        <div class="install-grid">
-          <article class="card">
-            <h3>Cursor Agent CLI</h3>
-            <pre><code>cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
-          </article>
-          <article class="card">
-            <h3>Cursor Marketplace</h3>
-            <pre><code>/add-plugin goal-loop</code></pre>
-            <p class="muted">Available after marketplace approval.</p>
-          </article>
-        </div>
-      </section>
+        <a class="repo-link" href="https://github.com/bodecloud/goal-loop">GitHub</a>
+      </nav>
+    </div>
 
-      <section id="other-agents" class="section narrow">
-        <p class="section-kicker">Other agents</p>
-        <h2>The pattern is portable.</h2>
-        <p>
-          Any agent runner can implement Goal Loop: persist the contract, run
-          the verifier after a turn, feed failure logs back as the next
-          instruction, and stop on success.
-        </p>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <span>Goal Loop v0.1.0</span>
-      <a href="https://github.com/bodecloud/goal-loop">GitHub</a>
-      <a href="https://github.com/bodecloud/goal-loop/blob/main/docs/goal-contract.md">Full contract</a>
-    </footer>
-
-    <script src="./script.js"></script>
+    <script src="./theme.js"></script>
   </body>
 </html>

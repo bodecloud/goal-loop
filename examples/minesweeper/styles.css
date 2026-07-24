@@ -1,0 +1,148 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --bg: #c0c0c0;
+  --panel: #bdbdbd;
+  --border-light: #ffffff;
+  --border-dark: #808080;
+  --text: #000000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #7f7f7f, #555);
+  color: var(--text);
+}
+
+.app {
+  background: var(--bg);
+  border: 3px solid var(--border-dark);
+  box-shadow: inset 1px 1px 0 var(--border-light), inset -1px -1px 0 #404040;
+  padding: 16px;
+  max-width: calc(100vw - 24px);
+}
+
+header h1 {
+  margin: 0 0 8px;
+}
+
+header p {
+  margin: 0 0 16px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.controls label {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--panel);
+  border: 2px inset var(--border-dark);
+}
+
+.counter {
+  font-family: "Courier New", monospace;
+  font-size: 28px;
+  font-weight: 700;
+  background: #000;
+  color: #f00;
+  padding: 4px 8px;
+  min-width: 72px;
+  text-align: center;
+}
+
+.face {
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  cursor: pointer;
+  border: 2px outset var(--border-light);
+  background: var(--panel);
+}
+
+.face.lost,
+.face.won {
+  background: #ddd;
+}
+
+.board {
+  display: grid;
+  gap: 0;
+  border: 3px inset var(--border-dark);
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.cell {
+  width: 24px;
+  height: 24px;
+  border: 2px outset var(--border-light);
+  background: var(--panel);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.cell.revealed {
+  border: 1px solid #999;
+  background: #dcdcdc;
+}
+
+.cell.flagged {
+  color: #c00;
+}
+
+.cell.mine {
+  background: #f88;
+}
+
+.cell.n1 { color: #0000ff; }
+.cell.n2 { color: #008000; }
+.cell.n3 { color: #ff0000; }
+.cell.n4 { color: #000080; }
+.cell.n5 { color: #800000; }
+.cell.n6 { color: #008080; }
+.cell.n7 { color: #000000; }
+.cell.n8 { color: #808080; }
+
+.status-line {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .counter {
+    font-size: 20px;
+    min-width: 56px;
+  }
+
+  .cell {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+}
