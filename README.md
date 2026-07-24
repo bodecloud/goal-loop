@@ -120,6 +120,12 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/your/project
 
 For Cursor IDE local development, use Cursor's current local plugin workflow. This repository documents the plugin shape and local CLI loading path directly; it does not independently prove the current IDE-side local-plugin UX.
 
+### Docs site
+
+Install-oriented docs are published to GitHub Pages:
+
+https://bodecloud.github.io/goal-loop/
+
 ## Quickstart
 
 1. Enable Cursor Agent Auto-run if you want unattended continuation.

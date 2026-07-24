@@ -6,3 +6,4 @@ coverage/
 .DS_Store
 *.log
 agentdecompile_projects/
+.playwright-mcp/

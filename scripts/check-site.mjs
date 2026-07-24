@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const siteDir = resolve("site");
-const requiredFiles = ["index.html", "styles.css", "theme.js", "CNAME"];
+const requiredFiles = ["index.html", "styles.css", "theme.js", "favicon.svg"];
 const requiredAnchors = [
   "top",
   "model",
@@ -81,13 +81,14 @@ for (const link of localLinks) {
   }
 }
 
-if (!html.includes("https://goal-loop.github.io/")) {
-  throw new Error("Missing canonical GitHub Pages URL");
+if (!html.includes("https://bodecloud.github.io/goal-loop/")) {
+  throw new Error("Missing canonical GitHub Pages URL for bodecloud.github.io/goal-loop/");
 }
 
-const cname = readFileSync(resolve(siteDir, "CNAME"), "utf8").trim();
-if (cname !== "goal-loop.github.io") {
-  throw new Error(`Unexpected CNAME value: ${cname}`);
+if (existsSync(resolve(siteDir, "CNAME"))) {
+  throw new Error(
+    "site/CNAME must not exist for the project Pages URL bodecloud.github.io/goal-loop/"
+  );
 }
 
 const readme = readFileSync(resolve("README.md"), "utf8");
