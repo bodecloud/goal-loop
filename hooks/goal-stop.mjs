@@ -7,12 +7,17 @@ import {
   computeFailureSignature,
   ensureGoalDirs,
   logPathForIteration,
+  nowIso,
   readJsonFile,
+  RUNS_DIR,
   validateGoal,
   writeJsonFile
 } from "../scripts/goal-lib.mjs";
 
 const MAX_FOLLOWUP_LOG_CHARS = 6000;
+const DEFAULT_VERIFY_TIMEOUT_MS = 600000;
+const DEFAULT_MAX_REPEAT_FAILURES = 3;
+const HOOK_ERROR_LOG = `${RUNS_DIR}/hook-errors.log`;
 
 async function readStdin() {
   let input = "";
@@ -29,8 +34,8 @@ function printHookResult(value) {
 function appendHookError(error) {
   ensureGoalDirs();
   appendFileSync(
-    ".cursor/goal/runs/hook-errors.log",
-    `[${new Date().toISOString()}] ${error.stack || error.message || String(error)}\n`,
+    HOOK_ERROR_LOG,
+    `[${nowIso()}] ${error.stack || error.message || String(error)}\n`,
     "utf8"
   );
 }
@@ -52,6 +57,17 @@ function runCommand(command, { cwd, timeoutMs }) {
       setTimeout(() => child.kill("SIGKILL"), 2000).unref();
     }, timeoutMs);
 
+    function settle(result) {
+      clearTimeout(timer);
+      resolve({
+        command,
+        timed_out: timedOut,
+        duration_ms: Date.now() - startedAt,
+        output,
+        ...result
+      });
+    }
+
     child.stdout.on("data", (chunk) => {
       output += chunk.toString();
     });
@@ -59,34 +75,17 @@ function runCommand(command, { cwd, timeoutMs }) {
       output += chunk.toString();
     });
     child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({
-        command,
-        ok: false,
-        exit_code: null,
-        timed_out: timedOut,
-        duration_ms: Date.now() - startedAt,
-        output: error.message
-      });
+      settle({ ok: false, exit_code: null, output: error.message });
     });
     child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      resolve({
-        command,
-        ok: code === 0 && !timedOut,
-        exit_code: code,
-        signal,
-        timed_out: timedOut,
-        duration_ms: Date.now() - startedAt,
-        output
-      });
+      settle({ ok: code === 0 && !timedOut, exit_code: code, signal });
     });
   });
 }
 
 async function runVerify(goal) {
   const cwd = goal.verify.cwd || ".";
-  const timeoutMs = goal.verify.timeout_ms || 600000;
+  const timeoutMs = goal.verify.timeout_ms || DEFAULT_VERIFY_TIMEOUT_MS;
   const command_results = [];
   let combinedLog = "";
 
@@ -119,10 +118,7 @@ async function runVerify(goal) {
 }
 
 function tail(text, maxChars) {
-  if (text.length <= maxChars) {
-    return text;
-  }
-  return text.slice(text.length - maxChars);
+  return text.slice(-maxChars);
 }
 
 function primaryFailureReason(result) {
@@ -162,14 +158,13 @@ function applyRepeatFailureTracking(goal, result) {
     goal.repeat_failure_count = 1;
   }
 
+  const configured = goal.limits.max_repeat_failures;
   const threshold =
-    typeof goal.limits.max_repeat_failures === "number" && goal.limits.max_repeat_failures > 0
-      ? goal.limits.max_repeat_failures
-      : 3;
+    typeof configured === "number" && configured > 0 ? configured : DEFAULT_MAX_REPEAT_FAILURES;
 
   if (goal.repeat_failure_count >= threshold) {
     goal.status = "blocked";
-    goal.blocked_at = new Date().toISOString();
+    goal.blocked_at = nowIso();
     goal.blocked_reason = primaryFailureReason(result);
     return true;
   }
@@ -201,11 +196,11 @@ async function main() {
     const startedAtMs = Date.parse(goal.started_at);
     const wallMs = Number.isFinite(startedAtMs) ? Date.now() - startedAtMs : 0;
 
-    if (goal.iteration > goal.limits.max_iterations || wallMs > goal.limits.max_wall_ms) {
+    const overIterations = goal.iteration > goal.limits.max_iterations;
+    if (overIterations || wallMs > goal.limits.max_wall_ms) {
       goal.status = "aborted";
-      goal.aborted_at = new Date().toISOString();
-      goal.abort_reason =
-        goal.iteration > goal.limits.max_iterations ? "max_iterations" : "max_wall_ms";
+      goal.aborted_at = nowIso();
+      goal.abort_reason = overIterations ? "max_iterations" : "max_wall_ms";
       writeJsonFile(ACTIVE_PATH, goal);
       printHookResult({});
       return;
@@ -217,7 +212,7 @@ async function main() {
     const logBody = [
       `Goal: ${goal.objective}`,
       `Iteration: ${goal.iteration}`,
-      `Started: ${new Date().toISOString()}`,
+      `Started: ${nowIso()}`,
       result.combinedLog
     ].join("\n");
     appendFileSync(logPath, logBody, "utf8");
@@ -227,7 +222,7 @@ async function main() {
       exit_codes: result.exit_codes,
       command_results: result.command_results,
       log_path: logPath,
-      completed_at: new Date().toISOString()
+      completed_at: nowIso()
     };
 
     appendProgressEntry(goal, {
@@ -240,7 +235,7 @@ async function main() {
 
     if (result.ok) {
       goal.status = "completed";
-      goal.completed_at = new Date().toISOString();
+      goal.completed_at = nowIso();
       goal.repeat_failure_count = 0;
       goal.last_failure_signature = null;
       writeJsonFile(ACTIVE_PATH, goal);

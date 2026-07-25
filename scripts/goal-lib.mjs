@@ -39,8 +39,16 @@ export function normalizeStringArray(value, fieldName) {
   return value.map((item) => item.trim()).filter(Boolean);
 }
 
+function asObject(value) {
+  return value && typeof value === "object" ? value : {};
+}
+
+function isPresent(value) {
+  return value !== undefined && value !== null;
+}
+
 function asPositiveInteger(value, fallback, fieldName) {
-  if (value === undefined || value === null || value === "") {
+  if (!isPresent(value) || value === "") {
     return fallback;
   }
   const parsed = Number(value);
@@ -64,8 +72,8 @@ const FAILURE_TAIL_CHARS = 2000;
 
 export function loadDefaults() {
   const defaults = readJsonFile(DEFAULTS_PATH, {});
-  const verify = defaults.verify && typeof defaults.verify === "object" ? defaults.verify : {};
-  const limits = defaults.limits && typeof defaults.limits === "object" ? defaults.limits : {};
+  const verify = asObject(defaults.verify);
+  const limits = asObject(defaults.limits);
   return {
     verify: {
       commands: normalizeStringArray(verify.commands, "verify.commands"),
@@ -172,8 +180,8 @@ export function computeFailureSignature(exitCodes = [], logTail = "") {
  * Append a compact progress entry, trimming oldest entries when over the bound.
  */
 export function appendProgressEntry(goal, entry) {
-  const progress = Array.isArray(goal.progress) ? goal.progress.slice() : [];
-  progress.push({
+  const progress = Array.isArray(goal.progress) ? goal.progress : [];
+  const appended = progress.concat({
     iteration: entry.iteration,
     ok: Boolean(entry.ok),
     exit_codes: Array.isArray(entry.exit_codes) ? entry.exit_codes : [],
@@ -181,11 +189,36 @@ export function appendProgressEntry(goal, entry) {
     log_path: typeof entry.log_path === "string" ? entry.log_path : null,
     at: entry.at || nowIso()
   });
-  while (progress.length > MAX_PROGRESS_ENTRIES) {
-    progress.shift();
-  }
-  goal.progress = progress;
+  goal.progress = appended.slice(-MAX_PROGRESS_ENTRIES);
   return goal;
+}
+
+const BEHAVIORAL_OBJECTIVE =
+  /\b(fix|implement|make\b.+\bwork|accessible|pass(?:es|ing)?|behavio[u]?r|quality|correct|bug|test)\b/i;
+const EXISTENCE_ONLY_COMMAND = /^\s*(?:test\s+-[ef]|ls(?:\s|$)|stat(?:\s|$)|\[(?:\s+-?[ef]))/i;
+const EXISTENCE_OBJECTIVE = /\b(file|path|exist|create|generate|write|touch)\b/i;
+const TOPICAL_STOP_TOKENS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "into",
+  "npm",
+  "run",
+  "node",
+  "test",
+  "true",
+  "false"
+]);
+
+function topicalTokens(text) {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 2);
 }
 
 /**
@@ -194,19 +227,16 @@ export function appendProgressEntry(goal, entry) {
 export function assessCheckStrength(objective, commands = []) {
   const warnings = [];
   const objectiveText = typeof objective === "string" ? objective.trim() : "";
-  const cmds = Array.isArray(commands) ? commands.filter((c) => typeof c === "string" && c.trim()) : [];
+  const cmds = Array.isArray(commands)
+    ? commands.filter((cmd) => typeof cmd === "string" && cmd.trim())
+    : [];
   if (!objectiveText || cmds.length === 0) {
     return warnings;
   }
 
-  const behavioral =
-    /\b(fix|implement|make\b.+\bwork|accessible|pass(?:es|ing)?|behavio[u]?r|quality|correct|bug|test)\b/i.test(
-      objectiveText
-    );
-  const existenceOnly = cmds.every((cmd) =>
-    /^\s*(?:test\s+-[ef]|ls(?:\s|$)|stat(?:\s|$)|\[(?:\s+-?[ef]))/i.test(cmd)
-  );
-  const existenceObjective = /\b(file|path|exist|create|generate|write|touch)\b/i.test(objectiveText);
+  const behavioral = BEHAVIORAL_OBJECTIVE.test(objectiveText);
+  const existenceOnly = cmds.every((cmd) => EXISTENCE_ONLY_COMMAND.test(cmd));
+  const existenceObjective = EXISTENCE_OBJECTIVE.test(objectiveText);
 
   if (behavioral && existenceOnly && !existenceObjective) {
     warnings.push(
@@ -214,33 +244,9 @@ export function assessCheckStrength(objective, commands = []) {
     );
   }
 
-  const objectiveTokens = new Set(
-    objectiveText
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter((token) => token.length > 2)
-  );
-  const stop = new Set([
-    "the",
-    "and",
-    "for",
-    "with",
-    "that",
-    "this",
-    "from",
-    "into",
-    "npm",
-    "run",
-    "node",
-    "test",
-    "true",
-    "false"
-  ]);
+  const objectiveTokens = new Set(topicalTokens(objectiveText));
   for (const cmd of cmds) {
-    const cmdTokens = cmd
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter((token) => token.length > 2 && !stop.has(token));
+    const cmdTokens = topicalTokens(cmd).filter((token) => !TOPICAL_STOP_TOKENS.has(token));
     const overlap = cmdTokens.some((token) => objectiveTokens.has(token));
     if (!overlap && cmdTokens.length > 0 && objectiveTokens.size > 0) {
       warnings.push(
@@ -251,6 +257,12 @@ export function assessCheckStrength(objective, commands = []) {
   }
 
   return warnings;
+}
+
+function assertOptionalString(value, fieldName) {
+  if (isPresent(value) && typeof value !== "string") {
+    throw new Error(`goal.${fieldName} must be a string`);
+  }
 }
 
 export function validateGoal(raw) {
@@ -284,35 +296,21 @@ export function validateGoal(raw) {
   }
   asPositiveInteger(raw.limits.max_iterations, 20, "limits.max_iterations");
   asPositiveInteger(raw.limits.max_wall_ms, 7200000, "limits.max_wall_ms");
-  if (raw.limits.max_repeat_failures !== undefined && raw.limits.max_repeat_failures !== null) {
+  if (isPresent(raw.limits.max_repeat_failures)) {
     asPositiveInteger(raw.limits.max_repeat_failures, 3, "limits.max_repeat_failures");
   }
   if (!Number.isSafeInteger(raw.iteration) || raw.iteration < 0) {
     throw new Error("goal.iteration must be a non-negative integer");
   }
   // Optional additive fields — tolerate absence for back-compat.
-  if (raw.repeat_failure_count !== undefined && raw.repeat_failure_count !== null) {
+  if (isPresent(raw.repeat_failure_count)) {
     asNonNegativeInteger(raw.repeat_failure_count, "repeat_failure_count");
   }
-  if (raw.progress !== undefined && raw.progress !== null) {
-    if (!Array.isArray(raw.progress)) {
-      throw new Error("goal.progress must be an array");
-    }
+  if (isPresent(raw.progress) && !Array.isArray(raw.progress)) {
+    throw new Error("goal.progress must be an array");
   }
-  if (
-    raw.last_failure_signature !== undefined &&
-    raw.last_failure_signature !== null &&
-    typeof raw.last_failure_signature !== "string"
-  ) {
-    throw new Error("goal.last_failure_signature must be a string");
-  }
-  if (
-    raw.blocked_reason !== undefined &&
-    raw.blocked_reason !== null &&
-    typeof raw.blocked_reason !== "string"
-  ) {
-    throw new Error("goal.blocked_reason must be a string");
-  }
+  assertOptionalString(raw.last_failure_signature, "last_failure_signature");
+  assertOptionalString(raw.blocked_reason, "blocked_reason");
   return raw;
 }
 
