@@ -1,12 +1,12 @@
-# Goal Contract
+# Goal contract
 
-Goal Loop coordinates commands, hooks, and agents through one project-local JSON contract.
+Goal Loop ties commands, hooks, and agents together through one project-local JSON file.
 
-For v0.1.0, that contract is `.cursor/goal/active.json`.
+For v0.1.0, that file is `.cursor/goal/active.json`.
 
-This file is not just metadata. It is the runtime state machine for the loop.
+This is not just metadata. It is the runtime state for the loop.
 
-## Canonical Active Goal Example
+## Canonical active goal example
 
 ```json
 {
@@ -29,35 +29,35 @@ This file is not just metadata. It is the runtime state machine for the loop.
 }
 ```
 
-## Why the Contract Lives in the Project
+## Why the contract lives in the project
 
-Goal Loop stores runtime state in the workspace instead of hiding it inside plugin internals because that gives you:
+Goal Loop stores runtime state in the workspace instead of hiding it inside the plugin because that gives you:
 
 - inspectability
 - portability
 - easier debugging
-- a stable handoff surface for other agents or wrappers
+- a stable handoff point for other agents or wrappers
 
-The loop is easier to trust when you can inspect its state directly.
+The loop is easier to trust when you can read its state directly.
 
-## Schema Fields
+## Schema fields
 
 | Field | Meaning |
 | --- | --- |
 | `version` | Contract schema version. v0.1.0 supports only `1`. |
 | `status` | Goal state: `draft`, `active`, `completed`, or `aborted`. |
 | `objective` | Human-readable target for the agent. |
-| `verify.commands` | Shell commands run sequentially after each completed turn. |
-| `verify.cwd` | Working directory used when spawning verifier commands. |
-| `verify.timeout_ms` | Timeout per verifier command. |
+| `verify.commands` | Shell commands run one after another after each completed turn. |
+| `verify.cwd` | Working directory used when spawning those commands. |
+| `verify.timeout_ms` | Timeout per command. |
 | `limits.max_iterations` | Maximum number of hook verification attempts. |
 | `limits.max_wall_ms` | Maximum allowed elapsed wall time since `started_at`. |
 | `completion_promise` | Reserved field for future non-shell completion modes. It is currently not used by the loop logic. |
 | `started_at` | ISO timestamp for loop start. |
 | `iteration` | Number of verification attempts already consumed. |
-| `last_verify` | Latest verifier result object, or `null` if verification has not run yet. |
+| `last_verify` | Latest check result object, or `null` if a check has not run yet. |
 
-## Status Semantics
+## How status values behave
 
 ### `draft`
 
@@ -68,13 +68,13 @@ The loop is easier to trust when you can inspect its state directly.
 ### `active`
 
 - live loop state
-- stop hook validates and executes verification
-- must have at least one verifier command
+- stop hook validates and runs the check
+- must have at least one command that either passes or fails
 
 ### `completed`
 
 - final success state
-- indicates the verifier passed
+- means the check passed
 - hook returns `{}` and does not continue the loop
 
 ### `aborted`
@@ -82,7 +82,7 @@ The loop is easier to trust when you can inspect its state directly.
 - final stopped state without success
 - reached through `/goal-abort` or limit exhaustion
 
-## Validation Rules
+## Validation rules
 
 The code currently enforces these rules:
 
@@ -95,11 +95,11 @@ The code currently enforces these rules:
 - `limits.max_iterations` must be a positive integer
 - `limits.max_wall_ms` must be a positive integer
 - `iteration` must be a non-negative integer
-- `active` goals must have at least one non-empty verifier command
+- `active` goals must have at least one non-empty command
 
 Whitespace-only commands are removed during normalization.
 
-## Default Resolution
+## Default resolution
 
 When a goal is created, `scripts/goal-lib.mjs` resolves defaults from `.cursor/goal/defaults.json`.
 
@@ -125,21 +125,21 @@ Resolution behavior:
 - explicit `--verify` commands override `defaults.verify.commands`
 - missing values fall back to hardcoded defaults
 
-If a goal is started with `status: active` and no explicit or default verifier commands exist, creation fails.
+If a goal is started with `status: active` and no explicit or default commands exist, creation fails.
 
-## Iteration Semantics
+## How `iteration` is counted
 
-`iteration` is incremented by the stop hook before verification runs.
+`iteration` is incremented by the stop hook before the check runs.
 
 That means:
 
-- a verifier that passes on the first post-turn run records `iteration: 1`
-- a verifier that fails on the first post-turn run also records `iteration: 1`
+- a check that passes on the first post-turn run records `iteration: 1`
+- a check that fails on the first post-turn run also records `iteration: 1`
 - limit checks happen after incrementing, so a goal already at the max iteration count aborts on the next stop-hook run
 
-## Run Logs
+## Run logs
 
-Verifier logs are written to:
+Check logs are written to:
 
 ```text
 .cursor/goal/runs/NNN.log
@@ -152,11 +152,11 @@ The hook writes:
 - objective
 - iteration number
 - hook-side timestamp
-- combined verifier output
+- combined command output
 
-That makes run logs both agent-readable and operator-auditable.
+That makes run logs readable for both the agent and you.
 
-## `last_verify` Shape
+## `last_verify` shape
 
 Example:
 
@@ -181,15 +181,15 @@ Example:
 
 Meaning:
 
-- `ok`: overall verifier success
+- `ok`: overall check success
 - `exit_codes`: exit codes for commands that ran
 - `command_results`: per-command result summary
 - `log_path`: where the full combined output was written
-- `completed_at`: when the verification run finished
+- `completed_at`: when the check finished
 
-Commands run sequentially. Verification stops at the first failure.
+Commands run one after another. The check stops at the first failure.
 
-## Hook Return Contract
+## How the stop hook decides what happens next
 
 The stop hook has only two meaningful outputs:
 
@@ -204,9 +204,11 @@ Returned when:
 - no active goal exists
 - goal status is not `active`
 - stop event status is not `completed`
-- verification passes
+- the check passes
 - loop aborts due to limits
 - hook crashes and fails open
+
+If the hook crashes, it returns `{}` and writes `.cursor/goal/runs/hook-errors.log`. A broken hook never traps the agent.
 
 ### Continue
 
@@ -220,18 +222,18 @@ Returned only when:
 
 - an active goal exists
 - the stop event is `completed`
-- verification ran
-- at least one verifier command failed
+- the check ran
+- at least one command failed
 
 The `followup_message` includes:
 
 - the objective
 - current iteration and limit
 - log path
-- a tail of the verifier output
+- a tail of the command output
 - explicit instruction to fix the root cause instead of declaring success
 
-## State Transitions
+## State transitions
 
 Typical path:
 
@@ -247,18 +249,18 @@ active -> aborted
 active -> completed
 ```
 
-There is currently no built-in promotion command from `draft` to `active`; activation occurs through `/goal`, not automatically through `/plan`.
+There is currently no built-in command that promotes a `draft` to `active`. Activation happens through `/goal`, not automatically through `/plan`.
 
-## Practical Implications
+## Practical implications
 
-The contract is intentionally simple enough to reimplement elsewhere. Any other agent wrapper can adopt Goal Loop behavior if it respects the same semantics:
+The contract is simple enough to reimplement elsewhere. Any other agent wrapper can adopt Goal Loop behavior if it follows the same rules:
 
 - preserve goal state
-- rerun verification after a completed turn
-- continue only on mechanical verifier failure
-- stop on verifier success or loop-stop conditions
+- rerun the check after a completed turn
+- continue only when a command that either passes or fails actually failed
+- stop when the check passes or when a loop-stop condition is hit
 
-## Related Docs
+## Related docs
 
 - [Cursor setup and operation](cursor.md)
 - [Verifier design](verifier-design.md)

@@ -1,52 +1,52 @@
-# Adoption Playbook
+# Adoption playbook
 
-This page is for the moment after someone understands Goal Loop conceptually and asks the real operational question:
+This page is for the moment after you understand Goal Loop and ask:
 
-> "How do we adopt this in an actual repository or across a small team without making the workflow sloppy?"
+> How do we adopt this in a real repo, or across a small team, without making the workflow sloppy?
 
-The short answer is that Goal Loop works best when the repo conventions are explicit and the verifier surface is disciplined.
+Short answer: start small, pick honest checks, and keep repo conventions explicit.
 
-## Start Small
+## Start with one narrow task
 
-Do not begin adoption with the broadest possible use case.
+Do not begin with the broadest possible use case.
 
 Start with one of these:
 
-- build repair
-- a focused failing test surface
-- a generated-file proof task
+- fixing a broken build
+- a focused failing test
+- proving a generated file exists
 - a stable local smoke script
 
-These cases make it easier to validate that:
+These make it easier to confirm that:
 
 - the plugin is wired correctly
-- the verifier is well chosen
-- the team understands what Goal Loop is and is not proving
+- the check is well chosen
+- the team understands what Goal Loop proves, and what it does not
 
-## Decide the Repository Default Early
+## Decide the repo default early
 
-Every adopting repo should make an explicit decision about `.cursor/goal/defaults.json`.
+Every adopting repo should decide what to do with `.cursor/goal/defaults.json`.
 
-There are only two healthy answers:
+There are two healthy answers.
 
-### Option 1: No shared default
+### Option 1: no shared default
 
 Use this when:
 
 - goals vary widely
-- a shared verifier would be misleading
-- most tasks need explicit `--verify`
+- a shared check would mislead people
+- most tasks need an explicit `--verify`
 
-This is often the right choice for heterogeneous repos.
+This is often right for mixed repos.
 
-### Option 2: Shared default exists
+### Option 2: a shared default exists
 
 Use this when:
 
-- the repo has a stable baseline proof surface
+- the repo has a stable baseline check
 - most goals should inherit the same completion gate
 
-Typical shared default:
+A typical shared default:
 
 ```json
 {
@@ -62,11 +62,11 @@ Typical shared default:
 }
 ```
 
-Do not commit a default verifier just because the file exists. Commit it only if the verifier is genuinely representative for normal goals in that repo.
+Do not commit a default just because the file can exist. Commit it only if the check is genuinely right for normal goals in that repo.
 
-## Establish Git Treatment
+## Decide what to commit and what to ignore
 
-The repo should clearly distinguish committed conventions from live runtime state.
+Separate shared conventions from live runtime state.
 
 Recommended treatment:
 
@@ -75,110 +75,108 @@ Recommended treatment:
 - ignore `.cursor/goal/draft.json`
 - ignore `.cursor/goal/runs/`
 
-Current repo `.gitignore` patterns already reflect that model.
+This repo's `.gitignore` already follows that model.
 
 `progress.md` is intentionally not hardcoded into `.gitignore`, because teams may want different treatment for that file.
 
-## Define an Objective Standard
+## Set a standard for objectives
 
-Adoption fails when objectives become vague and the loop is asked to compensate.
+Adoption fails when objectives stay vague and the loop is asked to fill the gaps.
 
-Team standard should be:
+Team rules:
 
 - one bounded objective per active goal
-- wording that maps naturally to a verifier
-- no "make it better" style prompts as active loop objectives
+- wording that maps naturally to a check
+- no "make it better" prompts as active loop objectives
 
-Good team examples:
+Good examples:
 
 - `Fix the production build`
 - `Repair the auth regression`
 - `Generate the missing export manifest`
 
-Bad team examples:
+Bad examples:
 
 - `Clean up the repo`
 - `Improve reliability`
 - `Make the docs way better`
 
-Those may be legitimate human goals, but they are not healthy active loop contracts until they are narrowed.
+Those can be real human goals, but they are not healthy active contracts until you narrow them.
 
-## Define a Verifier Standard
+## Set a standard for the check
 
-The most important adoption rule is not "use Goal Loop often." It is "use verifiers that actually prove the work."
+The most important adoption rule is not "use Goal Loop often." It is "use checks that actually prove the work."
 
-Healthy team rule:
+Healthy team rule: every active goal must have a check that a reviewer can defend.
 
-- every active goal must have a verifier that a reviewer can defend
+Reviewers should ask:
 
-Questions reviewers should ask:
-
-- Does this command actually prove the user's request?
+- Does this command prove the user's request?
 - Is it too broad for this task?
 - Is it too weak for this task?
 - Is it likely to be flaky?
-- Will its output help the next iteration?
+- Will its output help the next turn?
 
-If those questions are not being asked, the team is automating weak judgment rather than strong execution.
+If nobody asks those questions, the team is automating weak judgment.
 
-## Decide Who Owns Verification Quality
+## Decide who owns check quality
 
-Someone must own the quality of the proof surface.
+Someone must own the quality of the proof.
 
-In a solo workflow, that is the operator.
+In a solo workflow, that is you.
 In a team workflow, that is usually:
 
-- the person invoking the goal
-- or the reviewer approving the shared verifier convention
+- the person who starts the goal
+- or the reviewer who approves the shared default
 
-If ownership is unclear, the verifier standard degrades quickly.
+If ownership is unclear, the standard decays quickly.
 
-## Keep the Product Boundary Visible
+## Keep what Goal Loop does not do visible
 
-Teams adopt tools badly when they silently inflate the tool into something larger than it is.
+Teams adopt tools badly when they quietly inflate them.
 
-Repeat these truths often:
+Repeat these truths:
 
 - Goal Loop is not CI
 - Goal Loop is not a planner OS
-- Goal Loop is not semantic correctness
-- Goal Loop is not a substitute for operator judgment
+- Goal Loop is not proof of semantic correctness
+- Goal Loop is not a substitute for your judgment
 
-It is a verifier-backed local execution loop.
+It is a local execution loop backed by a command that either passes or fails.
 
-That description is smaller than what people often want, but it is also why the tool is easier to trust.
+That description is smaller than what people often want. It is also why the tool is easier to trust.
 
-## Recommended Adoption Sequence
+## Recommended adoption sequence
 
 1. Install the plugin locally.
 2. Validate the loop with a trivial proof task.
 3. Try one real build or focused test repair goal.
-4. Decide whether the repo deserves a shared default verifier.
-5. Document the repo convention for when to use explicit `--verify`.
-6. Teach contributors that the verifier is the authority, not the assistant summary.
+4. Decide whether the repo deserves a shared default check.
+5. Document when contributors should pass an explicit `--verify`.
+6. Teach contributors that the check decides when the work is done, not the assistant summary.
 
-Do not jump straight to high-flakiness, multi-service, or subjective tasks.
+Do not jump straight to flaky, multi-service, or subjective tasks.
 
-## Failure Signals During Adoption
+## Signs adoption is going badly
 
-If adoption is going badly, the symptoms usually look like this:
+Watch for these symptoms:
 
 - repeated goals with vague objectives
-- verifier commands chosen for convenience rather than proof
-- confusion about why a passing verifier did not satisfy the human request
+- check commands chosen for convenience rather than proof
+- confusion about why a passing check did not satisfy the human request
 - frustration that Auto-run behavior depends on Cursor configuration
 - goals drifting into broad cleanup work
 
-These are not reasons to abandon the tool automatically. They are signs that the operating model is being applied loosely.
+These are not automatic reasons to abandon the tool. They are signs the operating model is being applied loosely.
 
-## Healthy Steady State
+## What healthy steady state looks like
 
 Adoption is going well when:
 
 - contributors know when Goal Loop is appropriate
-- default verifiers are rare but justified
-- explicit verifiers are treated as part of task design
-- logs are inspected when loops stall
-- passing verification is interpreted honestly and narrowly
+- default checks are rare but justified
+- explicit checks are treated as part of task design
+- people inspect logs when loops stall
+- a passing check is read honestly and narrowly
 
-That is the real success case: not "the loop ran," but "the team used it with good judgment."
+The real success case is not "the loop ran." It is "the team used it with good judgment."

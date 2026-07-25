@@ -1,119 +1,124 @@
-# Reviewer Guide
+# Reviewer guide
 
-This page is for reviewers evaluating Goal Loop usage, not just operators invoking it.
+Use this page when you review someone else's Goal Loop usage, not when you are only running a loop yourself.
 
-The core reviewer question is:
+Core question:
 
-> "Does this loop have a defensible objective, a defensible verifier, and an honest claim about what success proves?"
+> Does this loop have a clear objective, a defensible check, and an honest claim about what success proves?
 
-If the answer is no, the loop may still run mechanically, but it is not high-quality usage.
+If the answer is no, the loop may still run, but the usage is weak.
 
-## What a Reviewer Should Check First
+## What to check first
 
 Inspect:
 
 1. the objective wording
 2. the verifier command or commands
 3. whether defaults were used or overridden
-4. what the verifier actually proves
-5. whether the claimed success matches that proof surface
+4. what the check actually proves
+5. whether the claimed success matches that proof
 
-Reviewing the resulting prose summary alone is not enough.
+Do not review only the agent's prose summary.
 
-## Objective Review
+## Objective review
 
-A reviewer should reject or challenge objectives that are:
+Challenge or reject objectives that are:
 
 - vague
-- broader than the verifier can prove
+- broader than the check can prove
 - bundles of unrelated cleanup
-- framed as quality aspirations rather than bounded outcomes
+- quality aspirations rather than bounded outcomes
 
 Healthy objective:
 
 - one bounded result
-- naturally mappable to verification
-- aligned with the user's actual ask
+- naturally maps to a command that passes or fails
+- matches the user's actual ask
 
 Weak objective:
 
 - `Make this better`
 - `Clean up the codebase`
-- `Improve docs quality` with no mechanical proof surface
+- `Improve docs quality` with no mechanical check
 
-## Verifier Review
+## Verifier review
 
-The verifier is the center of review.
+The check is the center of the review.
 
 Ask:
 
-1. Does this verifier actually prove the request?
+1. Does this check actually prove the request?
 2. Is it too broad for the task?
 3. Is it too weak for the task?
 4. Is it likely to be flaky?
 5. Will its output be useful when it fails?
 6. Is it reasonable to rerun every turn?
 
-If a verifier cannot be defended in plain language, it should be reconsidered.
+If the check cannot be defended in plain language, ask for a better one.
 
-## Default Verifier Review
+## Default verifier review
 
 If `.cursor/goal/defaults.json` is involved, ask:
 
-- Is this truly the repo’s normal baseline proof surface?
+- Is this truly the repo's normal baseline gate?
 - Would most reasonable goals in this repo want this default?
 - Is the current task narrower than the default and better served by explicit `--verify`?
 
 Defaults are policy, not convenience.
 
-## Reviewing Claimed Success
+## Reviewing claimed success
 
-When a loop passes, reviewers should ask:
+When a loop passes, ask:
 
-- what exactly passed?
-- what exactly does that prove?
-- what does it not prove?
+- What exactly passed?
+- What exactly does that prove?
+- What does it not prove?
 
 Examples:
 
-- passing build proves build health, not every runtime path
-- passing focused test proves that focused test surface, not all adjacent behavior
-- passing file-existence check proves existence, not semantic correctness
+- a passing build proves build health, not every runtime path
+- a passing focused test proves that focused suite, not all adjacent behavior
+- a file-existence check proves existence, not correct contents
 
-The tighter the claim matches the verifier, the healthier the review posture.
+The tighter the claim matches the check, the healthier the review.
 
-## Reviewing Repeated Failure
+## Reviewing repeated failure
 
-If a loop failed repeatedly, reviewers should inspect:
+If a loop failed repeatedly, inspect:
 
 - whether the same failure recurred
-- whether the verifier was too noisy
+- whether the check was too noisy
 - whether the objective was underspecified
-- whether the operator kept rerunning without improving the proof model
+- whether the person kept rerunning without improving the proof model
 
-Repeated failure is not automatically a tool problem. It may indicate weak task shaping.
+Repeated failure is not automatically a Goal Loop bug. It often means weak task shaping.
 
-## Team-Level Review Questions
+## Team-level review questions
 
-For team adoption, reviewers should also ask:
+For team adoption, also ask:
 
 - Are repo defaults justified?
-- Are contributors using Goal Loop for the right class of tasks?
+- Are people using Goal Loop for the right class of tasks?
 - Is runtime state treated correctly in git?
-- Is someone clearly responsible for verifier quality?
-- Are people interpreting success too broadly?
+- Is someone clearly responsible for check quality?
+- Are people reading success too broadly?
 
-If those answers are weak, the team is likely drifting toward false confidence.
+Weak answers here usually mean the team is drifting toward false confidence.
 
-## Healthy Reviewer Position
+## Healthy reviewer posture
 
 A good reviewer of Goal Loop usage is neither naive nor hostile.
 
-They should:
+- [ ] Accept mechanical proof when the check is well chosen.
+- [ ] Challenge weak or misaligned checks.
+- [ ] Demand honesty about what a pass really means.
+- [ ] Distinguish misuse from malfunction.
 
-- accept mechanical proof when the proof surface is well chosen
-- challenge weak or misaligned verifiers
-- demand honesty about what passed results really mean
-- distinguish tool misuse from tool malfunction
+That standard keeps Goal Loop useful instead of ceremonial.
 
-That is the standard that keeps Goal Loop useful instead of ceremonial.
+## Related docs
+
+- [Operator checklists](operator-checklists.md)
+- [Examples](examples.md)
+- [Evidence map](evidence-map.md)
+- [Adoption playbook](adoption-playbook.md)

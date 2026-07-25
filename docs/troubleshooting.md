@@ -1,31 +1,31 @@
 # Troubleshooting
 
-This guide maps likely user-visible problems to the current Goal Loop implementation.
+Debug from runtime evidence, not from guesses. Inspect state files and logs before changing the objective or rerunning the loop.
 
-The goal is to debug from evidence, not from guesses.
+## First files to inspect
 
-## First Inspection Checklist
-
-When a loop behaves unexpectedly, inspect these in order:
+When a loop behaves unexpectedly, check these in order:
 
 1. `.cursor/goal/active.json`
-2. `.cursor/goal/defaults.json` if defaults were expected
+2. `.cursor/goal/defaults.json` if you expected defaults
 3. `.cursor/goal/runs/`
 4. `last_verify.log_path`
 5. `.cursor/goal/runs/hook-errors.log`
 
-These files are the authoritative runtime record.
+These files are the real runtime record.
 
-## Problem: `/goal` Fails to Start
+## `/goal` fails to start
 
-Likely causes:
+**Symptom:** `/goal` rejects the start and prints an error.
+
+**Likely cause:**
 
 - empty objective
-- missing verifier with no defaults
+- missing verifier and no defaults
 - malformed defaults
 - invalid numeric flags
 
-Relevant code behavior:
+Relevant behavior:
 
 - `createGoal()` rejects empty objectives
 - active goals require at least one verifier command
@@ -37,21 +37,27 @@ Typical error:
 at least one verifier command is required; pass --verify or add .cursor/goal/defaults.json
 ```
 
-## Problem: `/goal-status` Says No Active Goal
+**What to do:** Pass `--verify "..."` or add a valid `.cursor/goal/defaults.json`. Fix empty objectives and invalid numeric flags before retrying.
 
-Meaning:
+## `/goal-status` says no active goal
 
-- `active.json` does not exist
+**Symptom:** Status reports that there is no active goal.
+
+**Likely cause:** `.cursor/goal/active.json` does not exist.
 
 This is normal if:
 
 - the goal has not been started
-- `abort --remove` was used
+- `/goal-abort --remove` was used
 - the active file was manually deleted
 
-## Problem: The Hook Returns `{}` and Nothing Continues
+**What to do:** Start a goal with `/goal`, or confirm you did not remove `active.json` on purpose.
 
-This is expected in several cases:
+## The hook returns `{}` and nothing continues
+
+**Symptom:** The stop hook returns `{}` and Cursor does not send the agent back to work.
+
+**Likely cause:** This is expected in several cases:
 
 - the stop event status is not `completed`
 - no active goal exists
@@ -60,84 +66,73 @@ This is expected in several cases:
 - the goal was aborted
 - the hook failed open due to an exception
 
-The next question is whether this `{}` was correct or unexpected.
+The hook returns `{"followup_message": "..."}` only when an active goal's verifier actually ran and failed. In all other stop cases it returns `{}`.
 
-To tell the difference, inspect:
+**What to do:** Inspect current goal `status`, `iteration`, `last_verify`, and `.cursor/goal/runs/hook-errors.log` to see whether `{}` was correct or unexpected.
 
-- current goal `status`
-- `iteration`
-- `last_verify`
-- `hook-errors.log`
+## The agent stops after one failed verification
 
-## Problem: The Agent Stops After One Failed Verification
+**Symptom:** The verifier failed once, then the agent stopped instead of continuing.
 
-Most likely cause:
+**Likely cause:** Cursor Agent Auto-run is disabled.
 
-- Cursor Agent Auto-run is disabled
+**What to do:**
 
-What to verify:
+- Confirm the hook returned a `followup_message`.
+- Enable Auto-run so Cursor auto-submits follow-ups.
 
-- the hook returned a `followup_message`
-- Cursor was configured to auto-submit follow-ups
+Without Auto-run, the loop still verifies honestly, but a human may need to continue. Goal Loop cannot force Cursor to auto-run; it only emits the continuation payload.
 
-Goal Loop itself cannot force Cursor to auto-run. It only emits the continuation payload.
+## The same failure repeats forever
 
-## Problem: The Same Failure Repeats Forever
+**Symptom:** Every turn fails with the same verifier result.
 
-Possible causes:
+**Likely cause:**
 
-- the verifier is correct and the agent is genuinely stuck
-- the verifier is too weak or too noisy
+- the check is correct and the agent is genuinely stuck
+- the check is too weak or too noisy
 - the failure log is not specific enough to guide the next turn
 - the objective is underspecified
 
-Use the run logs to distinguish these:
+Use the run logs to tell these apart:
 
-- repeated identical log output suggests the loop is not making progress
-- noisy logs suggest the verifier surface needs refinement
+- repeated identical log output suggests no progress
+- noisy logs suggest the check needs refinement
 
-Operational fix:
+**What to do:** Improve the verifier or objective. Do not merely rerun the same loop.
 
-- improve the verifier or objective rather than merely rerunning the same loop
+## The goal aborts unexpectedly
 
-## Problem: The Goal Aborts Unexpectedly
+**Symptom:** The goal status becomes `aborted` before you expect.
 
-The hook can set:
+**Likely cause:** The hook hit a limit and set:
 
 - `abort_reason: "max_iterations"`
 - `abort_reason: "max_wall_ms"`
 
-Inspect:
+Defaults include `limits.max_iterations: 20` and `limits.max_wall_ms: 7200000`.
 
-- `iteration`
-- `limits.max_iterations`
-- `started_at`
-- `limits.max_wall_ms`
+**What to do:** Inspect `iteration`, `limits.max_iterations`, `started_at`, and `limits.max_wall_ms`. Remember the hook increments `iteration` before verification runs. Raise limits only when the task truly needs more room; otherwise tighten the objective or check.
 
-Remember that the hook increments `iteration` before running verification.
+## The hook crashes
 
-## Problem: The Hook Crashes
+**Symptom:** Continuation stops, and `.cursor/goal/runs/hook-errors.log` has a new entry.
 
-Current design:
+**Likely cause:** An exception in the hook. By design the hook fails open: it writes the exception to `hook-errors.log` and returns `{}`, so a broken hook never traps the agent.
 
-- write exception details to `.cursor/goal/runs/hook-errors.log`
-- return `{}`
-
-That is fail-open behavior by design.
-
-What to inspect:
+**What to do:** Inspect:
 
 - malformed JSON in `active.json`
 - malformed stdin
 - environment issues affecting Node or shell execution
 
-Tests currently cover malformed hook input and confirm fail-open behavior.
+Tests cover malformed hook input and confirm fail-open behavior.
 
-## Problem: The Verifier Passed but the User Is Still Unhappy
+## The verifier passed but the result still feels wrong
 
-This is often not a Goal Loop bug.
+**Symptom:** Goal status is `completed`, but the original request is not really satisfied.
 
-It usually means the verifier was too weak for the actual user request.
+**Likely cause:** The check was too weak for the actual request. This is often not a Goal Loop bug.
 
 Examples:
 
@@ -145,23 +140,27 @@ Examples:
 - file exists but contents are wrong
 - docs page exists but the content is shallow
 
-The correct response is usually to strengthen the verifier or redefine the objective more honestly, not to claim the loop was wrong for honoring the verifier you gave it.
+**What to do:** Strengthen the verifier or redefine the objective more honestly. Do not claim the loop was wrong for honoring the check you gave it.
 
-## Problem: Multi-Command Verification Stops Too Early
+## Multi-command verification stops at the first failure
 
-This is normal.
+**Symptom:** Later `--verify` commands never ran after an earlier one failed.
 
-Goal Loop runs verifier commands sequentially and stops at the first failure. It does not try to collect every possible downstream failure in one pass.
+**Likely cause:** Normal behavior. Verifier commands run one after another and stop at the first failure. Goal Loop does not collect every downstream failure in one pass.
 
-That behavior is intentional because:
+That is intentional because:
 
 - the first failure is usually the root blocker
 - downstream noise is often misleading
 - shorter failure feedback is easier for the agent to act on
 
-## Problem: Manual Edits Broke the Contract
+**What to do:** Fix the first failing command, then let the next turn run the full sequence again.
 
-If someone hand-edits `active.json`, `validateGoal()` may reject it.
+## Manual edits broke the contract
+
+**Symptom:** Status or start fails after someone hand-edited `active.json`.
+
+**Likely cause:** `validateGoal()` rejected invalid fields.
 
 Check for:
 
@@ -172,13 +171,24 @@ Check for:
 - invalid integer fields
 - empty `verify.commands` on an active goal
 
-## Escalation Rule
+Valid statuses are `draft`, `active`, `completed`, and `aborted`.
 
-When debugging Goal Loop, prefer direct evidence from:
+**What to do:** Fix the JSON fields, or abort and start a fresh goal instead of hand-repairing a broken contract.
+
+## Escalation rule
+
+Prefer direct evidence from:
 
 - current JSON state
-- verifier logs
+- verifier logs under `.cursor/goal/runs/NNN.log`
 - hook errors
-- test coverage
+- test coverage (`npm test`, `npm run verify`)
 
-Do not infer loop behavior from the assistant's summary alone. The runtime files are the real source of truth.
+Do not infer loop behavior from the assistant's summary alone. The runtime files are the source of truth.
+
+## Related docs
+
+- [Goal contract](goal-contract.md)
+- [Operator checklists](operator-checklists.md)
+- [Examples](examples.md)
+- [FAQ](faq.md)

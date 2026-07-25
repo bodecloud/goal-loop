@@ -1,31 +1,31 @@
 ---
 name: goal
-description: Start a verifier-backed autonomous goal loop.
+description: Start a check-backed goal loop that keeps working until a shell command passes.
 ---
 
 # Start a Goal Loop
 
-Use this command when the user wants the agent to keep working until a deterministic verifier passes.
+Use this command when the user wants the agent to keep working until a shell check passes.
 
-This command is not a generic "be more autonomous" switch. Its job is to create a concrete goal contract whose completion authority is a shell verifier, not the assistant's judgment.
+This command is not a generic "be more autonomous" switch. Its job is to create a concrete goal contract. A shell check decides when the work is done, not the assistant's judgment.
 
-## Command Intent
+## Command intent
 
 When `/goal` is used correctly, the resulting loop should have:
 
 - one clear objective
-- one or more explicit verifier commands
-- a bounded completion surface
-- a stop hook that can mechanically decide pass or fail after each completed turn
+- one or more explicit check commands
+- a bounded definition of done
+- a stop hook that can mechanically decide pass or fail after each finished turn
 
 If the request is vague, expand it into a precise objective before writing the goal.
 
-## Required Behavior
+## Required behavior
 
 1. Parse the user's objective from the command text.
-2. Collect every verifier passed as `--verify "<command>"`.
-3. If no verifier was provided, fall back to `.cursor/goal/defaults.json`.
-4. Refuse to proceed if there is no explicit or default verifier for an active goal.
+2. Collect every check passed as `--verify "<command>"`.
+3. If no check was provided, fall back to `.cursor/goal/defaults.json`.
+4. Refuse to proceed if there is no explicit or default check for an active goal.
 5. Create the goal with:
 
    ```bash
@@ -36,12 +36,12 @@ If the request is vague, expand it into a precise objective before writing the g
 7. Tell the user that Cursor Agent Auto-run is required for unattended continuation.
 8. Start working on the objective immediately.
 
-## Objective Quality Rules
+## Objective quality rules
 
 Before starting the loop, make sure the objective is:
 
 - specific enough to act on
-- narrow enough that the verifier can actually prove it
+- narrow enough that the check can actually prove it
 - aligned with the user's real ask rather than a convenience rewrite
 
 Good examples:
@@ -58,11 +58,11 @@ Weak examples:
 
 If the user's wording is broad, convert it into the most faithful bounded objective you can justify from the request.
 
-## Verifier Quality Rules
+## Check quality rules
 
-Prefer verifier commands that are:
+Prefer check commands that are:
 
-- deterministic
+- repeatable
 - relevant to the actual request
 - cheap enough to rerun every turn
 - strong enough to prove completion
@@ -74,25 +74,25 @@ Good examples:
 - `test -f .cursor/goal/proof.txt`
 - `scripts/smoke-check.sh`
 
-Do not choose a verifier that is only tangentially related to the request just because it is easy to run.
+Do not choose a check that is only loosely related to the request just because it is easy to run.
 
-## Operator Messaging
+## What to tell the user
 
-When you start a goal, communicate three things clearly:
+When you start a goal, say three things clearly:
 
 - what objective is now active
-- what verifier will decide completion
+- what check will decide completion
 - whether Auto-run is needed for unattended continuation
 
-If the verifier came from defaults rather than explicit `--verify`, say so.
+If the check came from defaults rather than explicit `--verify`, say so.
 
-## Non-Goals
+## What not to do
 
 Do not:
 
 - declare success yourself
-- replace the verifier with subjective completion language
+- replace the check with subjective completion language
 - expand the task into unrelated cleanup
-- start a loop whose proof surface does not match the request
+- start a loop whose check does not match the request
 
-The Goal Loop stop hook is the authority. When verification passes, it will stop the loop. When verification fails, it will send the next instruction.
+The Goal Loop stop hook decides when the work is done. When the check passes, it stops the loop. When the check fails, it sends the next instruction.

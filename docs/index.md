@@ -1,17 +1,17 @@
-# Goal Loop Documentation Index
+# Goal Loop documentation index
 
-This is the documentation entrypoint for Goal Loop.
+This is the starting point for Goal Loop docs.
 
-The repo now has enough detail that a simple README list is no longer the best way to understand it. This page gives you the fastest route through the docs based on what you are trying to learn.
+Use this page when you want the shortest path through the docs for what you are trying to learn.
 
-## Read by Intent
+## Read by intent
 
 ### I want to use Goal Loop in Cursor
 
 Read in this order:
 
 1. [Cursor setup and operating guide](cursor.md)
-2. [Verifier design](verifier-design.md)
+2. [How to design a check](verifier-design.md)
 3. [Examples and usage patterns](examples.md)
 4. [Troubleshooting](troubleshooting.md)
 
@@ -20,7 +20,7 @@ Read in this order:
 Read:
 
 1. [Goal contract](goal-contract.md)
-2. [Verifier design](verifier-design.md)
+2. [How to design a check](verifier-design.md)
 3. [Adapting Goal Loop to other agents](other-agents.md)
 
 ### I want to decide whether Goal Loop is the right tool
@@ -28,16 +28,16 @@ Read:
 Read:
 
 1. [Decision guide and FAQ](faq.md)
-2. [Verifier design](verifier-design.md)
+2. [How to design a check](verifier-design.md)
 3. [Examples and usage patterns](examples.md)
 
-## Full Map
+## Full map
 
 ### Foundations
 
 - [Cursor setup and operating guide](cursor.md)
 - [Goal contract](goal-contract.md)
-- [Verifier design](verifier-design.md)
+- [How to design a check](verifier-design.md)
 - [Implementation evidence map](evidence-map.md)
 
 ### Practical usage
@@ -54,12 +54,12 @@ Read:
 
 - [Adapting Goal Loop to other agents](other-agents.md)
 
-## Key Ideas Repeated Across the Docs
+## Key ideas repeated across the docs
 
-- The verifier is the completion authority.
+- A shell check decides when the work is done.
 - Project-local state is intentional.
-- A weak verifier creates weak autonomy.
-- The product is narrow on purpose.
+- A weak check creates weak autonomy.
+- The product is small on purpose.
 - Honest boundaries are part of the design, not an omission.
 
 If you only remember those rules, the rest of the docs will make more sense.

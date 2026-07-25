@@ -1,26 +1,26 @@
-# Adapting Goal Loop to Other Agents
+# Adapting Goal Loop to other agents
 
-Goal Loop is Cursor-first in packaging, but not Cursor-exclusive in concept.
+Goal Loop is packaged for Cursor first, but the idea is not Cursor-only.
 
-The core idea is portable because the runtime contract is simple: persist goal state, run verification after each completed turn, continue only on verifier failure, and stop on verifier success or loop-stop conditions.
+The core loop is portable: keep goal state, run a check after each finished turn, continue only when that check fails, and stop when it passes or when limits are hit.
 
-This document explains what is essential to preserve when adapting Goal Loop elsewhere.
+This page describes the minimum behavior another agent wrapper must copy.
 
-## What Must Stay the Same
+## What must stay the same
 
-If you want "Goal Loop behavior" outside Cursor, preserve these invariants:
+If you want Goal Loop behavior outside Cursor, keep these rules:
 
 1. A project-local goal contract exists.
 2. The agent works toward `objective`.
-3. Verification runs after completed turns.
-4. Verification uses deterministic shell commands or an equally mechanical equivalent.
+3. The check runs after completed turns.
+4. The check uses shell commands, or something equally mechanical.
 5. Failure produces the next instruction.
 6. Success stops the loop.
-7. The agent does not get to self-certify completion.
+7. The agent does not get to declare itself done.
 
-If any of those are removed, you no longer have the same behavioral contract.
+If you drop any of those, you no longer have the same contract.
 
-## Minimal External Loop
+## Minimal external loop
 
 The abstract loop looks like:
 
@@ -28,17 +28,17 @@ The abstract loop looks like:
 read active goal
 agent turn runs
 turn ends
-run verifier
-if verifier passes: stop
-if verifier fails: send follow-up and continue
-if limits exceeded: abort
+run the check
+if the check passes: stop
+if the check fails: send follow-up and continue
+if limits are exceeded: abort
 ```
 
 That is all a wrapper needs conceptually.
 
-## Contract Compatibility
+## Contract compatibility
 
-The easiest path is to reuse the exact same state files:
+The easiest path is to reuse the same state files:
 
 ```text
 .cursor/goal/
@@ -47,38 +47,38 @@ The easiest path is to reuse the exact same state files:
 └── runs/
 ```
 
-You can rename or remap these internally, but compatibility is best if your wrapper can still read and write the same schema.
+You can rename or remap these inside your wrapper, but compatibility is best if you still read and write the same schema.
 
 ## Codex
 
 Some Codex environments already have goal primitives. Goal Loop is still useful when you want:
 
-- the same verifier-backed state file shared across tools
+- the same check-backed state file shared across tools
 - a portable audit trail
-- one narrow contract for non-Codex and Codex workflows alike
+- one narrow contract for Codex and non-Codex workflows alike
 
 In that model:
 
 - Codex may own the surrounding lifecycle
-- Goal Loop's `objective` and `verify.commands` remain the completion authority
+- Goal Loop's `objective` and `verify.commands` still decide when the work is done
 
-## Claude Code or Similar CLI Agents
+## Claude Code or similar CLI agents
 
 A CLI wrapper can implement the same pattern:
 
 ```text
 agent turn ends
   -> wrapper reads active.json
-  -> wrapper runs verifier commands
+  -> wrapper runs the check commands
   -> pass: stop
-  -> fail: send follow-up containing the log path and failure tail
+  -> fail: send a follow-up with the log path and failure tail
 ```
 
-The important constraint is not the product name of the agent. It is the authority boundary.
+The important constraint is not the product name of the agent. It is who decides completion.
 
-If the agent can override the verifier with prose, the adaptation is no longer faithful.
+If the agent can override the check with prose, the adaptation is no longer faithful.
 
-## Direct Reuse of `goal-stop.mjs`
+## Calling `goal-stop.mjs` directly
 
 Some wrappers may be able to call `hooks/goal-stop.mjs` directly.
 
@@ -86,7 +86,7 @@ Current expectations:
 
 - the working directory is the project root
 - stdin may contain a JSON object
-- if stdin contains `{"status":"completed"}`, the hook considers verification
+- if stdin contains `{"status":"completed"}`, the hook considers running the check
 - if stdin contains another status, the hook returns `{}`
 
 Outputs:
@@ -94,52 +94,54 @@ Outputs:
 - `{}` means stop or no continuation
 - `{ "followup_message": "..." }` means continue with that instruction
 
-## Required Operational Features in Another Wrapper
+The hook returns `{"followup_message": "..."}` only when an active goal's check actually ran and failed. In all stop cases it returns `{}`. If the hook crashes, it fails open: it returns `{}` and writes `.cursor/goal/runs/hook-errors.log`.
 
-If you are reimplementing instead of directly calling `goal-stop.mjs`, keep these behaviors:
+## Required behavior if you reimplement the wrapper
 
-- sequential command execution
-- stop on first failed verifier command
-- per-command timeout
-- persisted run logs
-- iteration incrementing
-- max iteration abort
-- max wall-clock abort
-- fail-open strategy for unexpected hook-level exceptions
+If you reimplement instead of calling `goal-stop.mjs`, keep these behaviors:
 
-These details matter. Without them, you may create a superficially similar loop with different failure semantics.
+- run check commands one after another
+- stop at the first failing command
+- apply a per-command timeout
+- write inspectable run logs
+- increment `iteration`
+- abort when `max_iterations` is hit
+- abort when `max_wall_ms` is hit
+- fail open on unexpected wrapper-level exceptions
 
-## Honest Non-Goals
+These details matter. Without them you can build a loop that looks similar but fails differently.
 
-Goal Loop does not require every external wrapper to mimic Cursor exactly.
+## What Goal Loop does not require from a port
+
+You do not need to copy Cursor's packaging exactly.
 
 You do not need:
 
-- the exact same plugin packaging
+- the same plugin packaging
 - the same command names
 - the same UI flow
 
 You do need:
 
-- the same truth model about completion
-- the same stop/continue semantics
+- the same rule about who decides completion
+- the same stop and continue semantics
 - the same inspectable evidence trail
 
-## Integration Checklist
+## Integration checklist
 
 - Read and write the goal contract.
 - Preserve iteration and wall-clock limits.
-- Store run logs in an inspectable path.
-- Feed verifier failure output back to the agent.
-- Stop on verifier success.
-- Do not let agent prose bypass mechanical completion.
+- Store run logs in a path you can inspect.
+- Feed check failure output back to the agent.
+- Stop when the check passes.
+- Do not let agent prose bypass the mechanical check.
 
-## When Not to Port It
+## When not to port it
 
 Do not port Goal Loop into another environment if that environment cannot reliably:
 
 - run a post-turn hook or equivalent wrapper step
-- run shell verification
-- feed deterministic failure output back into the next turn
+- run a shell check
+- feed real failure output back into the next turn
 
 Without those capabilities, the behavior will drift too far from the current product.

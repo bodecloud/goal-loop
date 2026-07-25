@@ -1,8 +1,8 @@
-# Goal Loop Reference
+# Goal Loop reference
 
-This reference is the compact operational companion to the main documentation. It exists for agents and operators who need the key runtime facts quickly.
+This reference is the short operational companion to the main docs. Use it when you need the key runtime facts quickly.
 
-## Runtime Files
+## Runtime files
 
 Goal Loop stores runtime state in the active project, not in the plugin install directory.
 
@@ -18,7 +18,7 @@ Goal Loop stores runtime state in the active project, not in the plugin install 
 Guidance:
 
 - `active.json`, `draft.json`, and `runs/` are mutable runtime state
-- `defaults.json` is intended to be committed when a project wants a shared verifier
+- `defaults.json` is meant to be committed when a project wants a shared check
 - `progress.md` is optional and should stay accurate if used
 
 ## `active.json` v1
@@ -44,26 +44,26 @@ Guidance:
 }
 ```
 
-## Status Values
+## Status values
 
 - `draft`: planned but not active
-- `active`: stop hook will verify and continue on failure
-- `completed`: verifier passed and the loop is done
-- `aborted`: loop stopped without verifier success
+- `active`: stop hook will run the check and continue on failure
+- `completed`: check passed and the loop is done
+- `aborted`: loop stopped without a passing check
 
-## Verification Contract
+## Check contract
 
-Verifier commands:
+Check commands:
 
-- run sequentially
+- run one after another
 - stop at the first failure
 - write a run log under `.cursor/goal/runs/`
 - update `last_verify`
 - return a stop-hook `followup_message` on failure
 
-The agent is not the completion authority. The verifier is.
+The agent does not decide when the work is done. The check does.
 
-## Stop Hook Outcomes
+## Stop hook outcomes
 
 Success or no continuation:
 
@@ -79,7 +79,7 @@ Failure requiring another turn:
 }
 ```
 
-## Loop Guardrails
+## Loop guardrails
 
 - Cursor hook `loop_limit: 20`
 - goal-level `limits.max_iterations`
@@ -87,7 +87,7 @@ Failure requiring another turn:
 - per-command `verify.timeout_ms`
 - fail-open hook error handling via `.cursor/goal/runs/hook-errors.log`
 
-## Quick Operator Reminder
+## Quick reminder
 
 If loop behavior is confusing, inspect:
 

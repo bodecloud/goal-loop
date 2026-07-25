@@ -1,8 +1,8 @@
-# Cursor Setup and Operating Guide
+# Cursor setup and operating guide
 
-This document is the practical guide for running Goal Loop in Cursor. It focuses on how the plugin is wired, what Cursor is expected to do, what the operator must configure, and what behavior is normal when loops fail or stop.
+This guide shows how to run Goal Loop in Cursor: how the plugin is wired, what you need to configure, and what normal success and failure look like.
 
-## Preconditions
+## What you need first
 
 Goal Loop assumes:
 
@@ -14,9 +14,9 @@ For unattended continuation, it also assumes:
 
 - Cursor Agent Auto-run is enabled
 
-Without Auto-run, Goal Loop still performs verification honestly. The difference is that failed verification may require a human to continue the next turn manually.
+Without Auto-run, Goal Loop still runs the check honestly. The difference is that a failed check may need you to start the next turn by hand.
 
-## Plugin Layout
+## Plugin layout
 
 Relevant files:
 
@@ -36,15 +36,15 @@ goal-loop/
 └── templates/
 ```
 
-The plugin manifest points Cursor at commands, skills, agents, and hooks. The stop hook configured in `hooks/hooks.json` is:
+The plugin manifest points Cursor at commands, skills, agents, and hooks. The stop hook in `hooks/hooks.json` is:
 
 ```bash
 node ${CURSOR_PLUGIN_ROOT}/hooks/goal-stop.mjs
 ```
 
-`loop_limit: 20` in that hook config is a Cursor-side safety bound, separate from the goal contract's own iteration limit.
+`loop_limit: 20` in that hook config is a Cursor-side safety bound. It is separate from the goal contract's own iteration limit.
 
-## Local Development Load
+## Local development load
 
 For Cursor Agent CLI experiments:
 
@@ -52,19 +52,19 @@ For Cursor Agent CLI experiments:
 cursor-agent --plugin-dir "$PWD" --workspace /path/to/your/project
 ```
 
-That tells Cursor to load the plugin from the repository checkout rather than from a packaged install.
+That loads the plugin from this checkout instead of a packaged install.
 
-For Cursor IDE local-plugin workflows, treat this repository as authoritative for the plugin shape, but not as proof of current IDE UX details. Those details can change outside this repo.
+For Cursor IDE local-plugin workflows, treat this repository as the source of truth for plugin shape. It does not prove current IDE UX details. Those can change outside this repo.
 
-## Day-One Setup in a Project
+## Day-one setup in a project
 
 The minimum useful setup is:
 
-1. Make sure your project can run the intended verifier from the workspace root.
-2. Decide whether the verifier should be per-goal or committed as a project default.
-3. Enable Auto-run if you want the loop to continue automatically after failed verification.
+1. Make sure your project can run the intended check from the workspace root.
+2. Decide whether the check should be per-goal or committed as a project default.
+3. Enable Auto-run if you want the loop to continue on its own after a failed check.
 
-If a repo has a stable shared verifier, create `.cursor/goal/defaults.json`:
+If a repo has a stable shared check, create `.cursor/goal/defaults.json`:
 
 ```json
 {
@@ -82,39 +82,39 @@ If a repo has a stable shared verifier, create `.cursor/goal/defaults.json`:
 
 That makes `/goal "Fix build"` valid even without explicit `--verify`.
 
-## What Happens When You Run `/goal`
+## What happens when you run `/goal`
 
-The `/goal` command handler does not itself execute the loop. It creates the contract that drives the loop.
+The `/goal` command does not run the loop itself. It creates the contract that drives the loop.
 
-Operationally:
+What it does:
 
 1. It parses the objective from the command text.
 2. It collects every `--verify "<command>"` flag.
-3. If no verifier is passed, it loads defaults from `.cursor/goal/defaults.json`.
+3. If no check is passed, it loads defaults from `.cursor/goal/defaults.json`.
 4. It runs `node scripts/goalctl.mjs start ...`.
 5. It tells the agent to load the `cursor-goal` skill.
 6. The agent begins the requested work.
 
-The resulting `active.json` becomes the source of truth for subsequent turns.
+The resulting `active.json` is the source of truth for later turns.
 
-## Normal Loop Behavior
+## Normal loop behavior
 
-With Auto-run enabled, the expected happy path is:
+With Auto-run enabled, the happy path is:
 
-1. User runs `/goal`.
-2. Agent makes a change and ends its turn.
-3. Stop hook runs verification.
-4. If the verifier fails, the hook returns a `followup_message`.
+1. You run `/goal`.
+2. The agent makes a change and ends its turn.
+3. The stop hook runs the check.
+4. If the check fails, the hook returns a `followup_message`.
 5. Cursor submits that message as the next prompt.
-6. Agent reads the log, fixes the problem, and ends the turn again.
-7. Hook reruns verification.
-8. Once the verifier passes, the hook returns `{}` and marks the goal `completed`.
+6. The agent reads the log, fixes the problem, and ends the turn again.
+7. The hook runs the check again.
+8. Once the check passes, the hook returns `{}` and marks the goal `completed`.
 
-That loop continues until success or until one of the stop conditions is hit.
+That continues until success or until a stop condition is hit.
 
-## Normal Non-Happy-Path Behavior
+## Normal non-happy-path behavior
 
-These cases are expected and documented behavior, not plugin corruption:
+These cases are expected. They are not plugin corruption.
 
 ### The loop stops after the first failure
 
@@ -131,11 +131,11 @@ Likely causes:
 
 - no `.cursor/goal/active.json`
 - active goal status is not `active`
-- Cursor emitted a non-completed stop event
+- Cursor emitted a stop event that is not `completed`
 
 `goal-stop.mjs` intentionally returns `{}` in these cases.
 
-### The verifier never runs
+### The check never runs
 
 Inspect:
 
@@ -148,17 +148,17 @@ If `active.json` is missing or invalid, the hook cannot enforce the loop.
 
 ### The agent says it is done but the loop keeps going
 
-That is normal if the verifier is still failing. Goal Loop explicitly does not trust the agent's own declaration of completion.
+That is normal if the check is still failing. Goal Loop does not trust the agent to declare itself done.
 
-### The verifier passes but the loop seems stuck
+### The check passes but the loop seems stuck
 
-Expected code behavior is:
+Expected behavior is:
 
 - `status` becomes `completed`
 - `last_verify.ok` becomes `true`
 - hook returns `{}`
 
-If you do not see that state transition, capture:
+If you do not see that state change, capture:
 
 - the current `active.json`
 - the latest run log
@@ -166,36 +166,36 @@ If you do not see that state transition, capture:
 
 Then file an issue.
 
-## Abort Modes
+## Abort modes
 
-`/goal-abort` has two operator meanings:
+`/goal-abort` has two meanings:
 
 - soft abort: keep the final `active.json`, but mark it `aborted`
 - remove state: delete `active.json` completely
 
-The default command path is soft abort because it preserves auditability. `--remove` is for operators who explicitly want state erased instead.
+The default is soft abort because it keeps an audit trail. Use `--remove` when you want the state erased.
 
-## Recommended Repository Conventions
+## Recommended repository conventions
 
 For teams using Goal Loop across multiple repos:
 
-- commit `.cursor/goal/defaults.json` only when the verifier is truly shared
+- commit `.cursor/goal/defaults.json` only when the check is truly shared
 - ignore `.cursor/goal/active.json`, `.cursor/goal/draft.json`, and `.cursor/goal/runs/`
-- keep verifier commands close to the user request, not to generic repo hygiene
+- keep check commands close to the user request, not to generic repo hygiene
 - prefer one active goal at a time
 
-## Operator Guidance
+## Practical guidance
 
-Goal Loop is strongest when the operator treats it as a bounded execution tool, not as a magical autonomy switch.
+Treat Goal Loop as a bounded execution tool, not as a magic autonomy switch. Auto-run is what makes continuation unattended. A weak check gives you weak autonomy.
 
 Practical guidance:
 
 - Scope the objective tightly.
-- Choose the narrowest verifier that still proves the job.
-- Do not use Goal Loop when the real completion authority is purely subjective.
-- If the same failure repeats, inspect the log instead of merely letting the loop churn.
+- Choose the narrowest check that still proves the job.
+- Do not use Goal Loop when "done" is purely subjective.
+- If the same failure repeats, read the log instead of letting the loop churn.
 
-## Related Docs
+## Related docs
 
 - [Goal contract](goal-contract.md)
 - [Verifier design](verifier-design.md)

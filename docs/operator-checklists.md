@@ -1,30 +1,26 @@
-# Operator Checklists
+# Operator checklists
 
-This page is the compact runbook version of the documentation set.
+Short runbooks for people who already know what Goal Loop is and need a fast checklist before or during a real run.
 
-Use it when you already understand Goal Loop conceptually and need a fast, repeatable checklist for real operation rather than a long explanation.
+## Before you start a goal
 
-## Checklist 1: Before Starting a Goal
+- [ ] The objective is specific enough to act on.
+- [ ] The objective is narrow enough that a command can prove it.
+- [ ] The check matches the real request.
+- [ ] The check is repeatable enough to rerun after every turn.
+- [ ] Failure output will be useful when it fails.
+- [ ] The repo has either a justified shared default or an explicit `--verify`.
+- [ ] Cursor Agent Auto-run is on if you want unattended continuation.
 
-Confirm all of these:
+If any box is unchecked, fix the setup before starting the loop.
 
-- The objective is specific enough to act on.
-- The objective is narrow enough that a verifier can actually prove it.
-- The verifier matches the user's real request.
-- The verifier is deterministic enough to rerun after every turn.
-- The verifier output will be useful if it fails.
-- The repo has either a justified shared default or an explicit `--verify`.
-- Cursor Agent Auto-run is enabled if unattended continuation is desired.
-
-If any of those are false, improve the setup before starting the loop.
-
-## Checklist 2: Writing a Healthy Objective
+## Writing a healthy objective
 
 A healthy active objective should:
 
 - describe one bounded outcome
-- map naturally to a proof surface
-- avoid vague improvement language
+- map naturally to a command that passes or fails
+- avoid vague "make it better" language
 - avoid bundling unrelated cleanup
 
 Good examples:
@@ -37,11 +33,11 @@ Bad examples:
 
 - `Make the app better`
 - `Clean up this repo`
-- `Improve docs quality` without a real proof surface
+- `Improve docs quality` without a real check that can prove it
 
-## Checklist 3: Reviewing a Verifier
+## Reviewing a verifier
 
-Ask these questions:
+Ask:
 
 1. Does this command actually prove the request?
 2. Is it too broad for the task?
@@ -50,24 +46,24 @@ Ask these questions:
 5. Will the output be actionable if it fails?
 6. Is it cheap enough to rerun every turn?
 
-If you cannot defend the verifier in one or two sentences, it is probably not ready.
+If you cannot defend the check in one or two sentences, it is not ready.
 
-## Checklist 4: Deciding Between Defaults and Explicit `--verify`
+## Defaults vs explicit `--verify`
 
 Use `.cursor/goal/defaults.json` when:
 
-- the repo has a stable baseline proof surface
-- most goals in that repo should inherit the same verifier
+- the repo has a stable baseline gate
+- most goals in that repo should inherit the same check
 
 Use explicit `--verify` when:
 
 - the task is narrower than the repo baseline
-- the proof surface is task-specific
+- the check is task-specific
 - multiple commands need to run in a specific order
 
-Do not create a shared default merely because it is convenient. Defaults are repo policy, not a shortcut.
+Do not create a shared default just because it is convenient. Defaults are repo policy, not a shortcut.
 
-## Checklist 5: When a Loop Fails Repeatedly
+## When a loop fails repeatedly
 
 Inspect in this order:
 
@@ -80,44 +76,51 @@ Inspect in this order:
 Then ask:
 
 - Is the failure identical each time?
-- Is the verifier too noisy?
-- Is the verifier too weak for the task?
+- Is the check too noisy?
+- Is the check too weak for the task?
 - Is the objective underspecified?
 - Is Auto-run disabled?
 
-Do not just rerun the same failing loop blindly.
+Do not blindly rerun the same failing loop.
 
-## Checklist 6: When a Passing Verifier Still Feels Wrong
+## When a passing check still feels wrong
 
 Ask:
 
-- Did the verifier actually prove the full request?
+- Did the check actually prove the full request?
 - Did it only prove a narrow proxy?
-- Was the real proof surface runtime behavior rather than build health?
-- Was the task more subjective than the verifier could capture?
+- Was the real proof runtime behavior rather than build health?
+- Was the task more subjective than a shell command can capture?
 
-If the answer exposes verifier weakness, fix the proof model rather than blaming the loop for enforcing it faithfully.
+If the check was weak, strengthen the proof model. Do not blame the loop for enforcing the gate you gave it.
 
-## Checklist 7: Team Adoption Review
+## Team adoption review
 
-Before a team treats Goal Loop as normal workflow, confirm:
+Before a team treats Goal Loop as normal workflow:
 
-- contributors know the verifier is the completion authority
-- repo defaults exist only when justified
-- active objectives are kept narrow
-- runtime state is ignored in git where appropriate
-- someone owns verifier quality
-- contributors know when not to use Goal Loop
+- [ ] Contributors know the check decides when the work is done.
+- [ ] Repo defaults exist only when justified.
+- [ ] Active objectives stay narrow.
+- [ ] Runtime state is ignored in git where appropriate.
+- [ ] Someone owns check quality.
+- [ ] Contributors know when not to use Goal Loop.
 
-If those norms are absent, adoption will drift into noisy pseudo-autonomy.
+Without those norms, adoption drifts into noisy false confidence.
 
-## Checklist 8: When Not to Use Goal Loop
+## When not to use Goal Loop
 
 Do not use it when:
 
 - the task is mostly subjective
-- the proof surface cannot be encoded mechanically
-- the verifier depends heavily on flaky external state
-- the real request is broader than any honest local verifier you currently have
+- you cannot encode proof as a command that passes or fails
+- the check depends heavily on flaky external state
+- the real request is broader than any honest local check you currently have
 
-Goal Loop is valuable when it sharpens execution. It is a poor fit when it only creates false confidence.
+Goal Loop helps when it sharpens execution. It is a poor fit when it only creates false confidence.
+
+## Related docs
+
+- [Examples](examples.md)
+- [Reviewer guide](reviewer-guide.md)
+- [Troubleshooting](troubleshooting.md)
+- [Adoption playbook](adoption-playbook.md)

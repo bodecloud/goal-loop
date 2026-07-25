@@ -5,30 +5,24 @@ description: Stop the active Goal Loop.
 
 # Abort Goal Loop
 
-Use this command when the user wants the active loop to stop before verifier success.
+Use this command when the user wants the active loop to stop before the check passes.
 
-Default behavior preserves the final state by marking the active goal `aborted`. This is preferable when the user may want an audit trail of what happened.
+## Required behavior
 
-## Default Abort
+1. Abort the active goal with:
 
-Run:
+   ```bash
+   node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" abort
+   ```
 
-```bash
-node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" abort
-```
+2. If the user asked to remove the goal file, run:
 
-Then tell the user:
+   ```bash
+   node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" abort --remove
+   ```
 
-- the active goal has been marked aborted
-- the stop hook will no longer continue the loop
-- the final `active.json` remains available for inspection
+3. Confirm the resulting status to the user.
 
-## Remove-State Abort
+## What to tell the user
 
-If the user explicitly wants the goal file removed rather than preserved, run:
-
-```bash
-node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" abort --remove
-```
-
-Use removal only when the user clearly wants state cleared. Do not silently erase state when simple abort semantics are enough.
+Say whether the goal was marked `aborted` or removed. If there was no active goal, say that clearly.

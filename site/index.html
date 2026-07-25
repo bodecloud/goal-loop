@@ -6,12 +6,12 @@
     <title>Goal Loop — Install &amp; Docs</title>
     <meta
       name="description"
-      content="Install Goal Loop: a verifier-backed /goal loop for Cursor and other coding agents."
+      content="Install Goal Loop: a /goal loop for Cursor that keeps working until a shell check passes."
     />
     <meta property="og:title" content="Goal Loop Docs" />
     <meta
       property="og:description"
-      content="Codex-style /goal for Cursor — shell verification decides completion."
+      content="Codex-style /goal for Cursor — a shell check decides when the work is done."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://bodecloud.github.io/goal-loop/" />
@@ -50,7 +50,7 @@
           <a href="#usage">Quick start</a>
           <a href="#model">Why it exists</a>
           <a href="#contract">Goal contract</a>
-          <a href="#verifier">Verifier design</a>
+          <a href="#verifier">How to choose a check</a>
           <a href="#limits">Stop conditions</a>
           <a href="#troubleshooting">Troubleshooting</a>
           <a href="#docs-map">Docs map</a>
@@ -60,16 +60,16 @@
           <a href="#authoring">Authoring</a>
           <a href="#adoption">Adoption</a>
           <a href="#examples">Examples</a>
-          <a href="#backlog">Non-goals</a>
+          <a href="#backlog">What it does not do</a>
         </nav>
       </aside>
 
       <main id="main" class="content">
-        <p class="eyebrow">Cursor plugin · verifier-backed autonomy</p>
+        <p class="eyebrow">Cursor plugin · check-backed autonomy</p>
         <h1>Goal Loop</h1>
         <p class="lede">
           A small <code>/goal</code> command that keeps agents working until a shell
-          verifier passes — not until the model decides it looks done.
+          check passes — not until the model decides it looks done.
         </p>
 
         <div class="meta-row">
@@ -97,7 +97,7 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
           </div>
 
           <h3>Optional project defaults</h3>
-          <p>Commit a shared baseline verifier when the repo has one:</p>
+          <p>Commit a shared baseline check when the repo has one:</p>
           <div class="code-block">
             <div class="code-header">
               <span>.cursor/goal/defaults.json</span>
@@ -124,7 +124,7 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
 
         <section id="usage" aria-labelledby="usage-title">
           <h2 id="usage-title">Quick start</h2>
-          <p>Start with one clear objective and one real verifier:</p>
+          <p>Start with one clear objective and one real check:</p>
           <div class="code-block">
             <div class="code-header">
               <span>Cursor Agent</span>
@@ -135,8 +135,8 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
           <ol class="steps">
             <li>Writes <code>.cursor/goal/active.json</code></li>
             <li>Agent works the objective</li>
-            <li>Stop hook runs after each completed turn</li>
-            <li>Verifier commands run in the shell</li>
+            <li>Stop hook runs after each finished turn</li>
+            <li>Check commands run in the shell</li>
             <li>Failure → log-backed <code>followup_message</code></li>
             <li>Success → <code>completed</code> and <code>{}</code></li>
           </ol>
@@ -145,11 +145,11 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
           <dl class="defs">
             <div>
               <dt><code>/plan [objective]</code></dt>
-              <dd>Draft objective + verifier without activating the loop.</dd>
+              <dd>Draft objective + check without activating the loop.</dd>
             </div>
             <div>
               <dt><code>/goal-status</code></dt>
-              <dd>Inspect objective, iteration, verifier, and last log path.</dd>
+              <dd>Inspect objective, iteration, check, and last log path.</dd>
             </div>
             <div>
               <dt><code>/goal-abort</code></dt>
@@ -162,16 +162,16 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
           <h2 id="model-title">Why it exists</h2>
           <div class="card-grid">
             <article class="card">
-              <h3>Premature completion</h3>
+              <h3>Stops too early</h3>
               <p>
-                Agents often stop when work merely looks done. Goal Loop moves completion
-                authority into a mechanical verifier.
+                Agents often stop when work merely looks done. Goal Loop moves the
+                "is it done?" decision into a shell check.
               </p>
             </article>
             <article class="card">
               <h3>Manual “continue”</h3>
               <p>
-                With Auto-run, failed verification becomes the next instruction automatically.
+                With Auto-run, a failed check becomes the next instruction automatically.
               </p>
             </article>
             <article class="card">
@@ -228,11 +228,11 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
               </tr>
               <tr>
                 <td><code>verify.commands</code></td>
-                <td>Shell commands rerun after each completed turn.</td>
+                <td>Shell commands rerun after each finished turn.</td>
               </tr>
               <tr>
                 <td><code>verify.cwd</code></td>
-                <td>Working directory for verifier execution.</td>
+                <td>Working directory for the check.</td>
               </tr>
               <tr>
                 <td><code>limits</code></td>
@@ -247,12 +247,12 @@ cursor-agent --plugin-dir "$PWD" --workspace /path/to/project</code></pre>
         </section>
 
         <section id="verifier" aria-labelledby="verifier-title">
-          <h2 id="verifier-title">Verifier design</h2>
+          <h2 id="verifier-title">How to choose a check</h2>
           <div class="card-grid">
             <article class="card">
               <h3>Good traits</h3>
               <ul>
-                <li>Deterministic</li>
+                <li>Repeatable</li>
                 <li>Relevant to the real request</li>
                 <li>Cheap enough to rerun often</li>
                 <li>Strong enough to prove the outcome</li>
@@ -268,8 +268,8 @@ test -f generated/report.json</code></pre>
             <article class="card">
               <h3>Bad fits</h3>
               <p>
-                Lint for a runtime bug, file existence for a semantic rewrite, or a flaky
-                network probe for a local deterministic fix.
+                Lint for a runtime bug, file existence for a meaning rewrite, or a flaky
+                network probe for a local, repeatable fix.
               </p>
             </article>
           </div>
@@ -280,7 +280,7 @@ test -f generated/report.json</code></pre>
           <div class="card-grid">
             <article class="card">
               <h3>Success</h3>
-              <p>All verifier commands exit 0 → status <code>completed</code>, hook returns <code>{}</code>.</p>
+              <p>All check commands exit 0 → status <code>completed</code>, hook returns <code>{}</code>.</p>
             </article>
             <article class="card">
               <h3>Continue</h3>
@@ -314,8 +314,8 @@ test -f generated/report.json</code></pre>
               <p>Enable Cursor Agent Auto-run so the follow-up is submitted automatically.</p>
             </article>
             <article class="card">
-              <h3>Verifier passes, user unhappy</h3>
-              <p>Usually the verifier was too weak for the request — not a loop bug.</p>
+              <h3>Check passes, you are unhappy</h3>
+              <p>Usually the check was too weak for the request — not a loop bug.</p>
             </article>
           </div>
         </section>
@@ -325,15 +325,15 @@ test -f generated/report.json</code></pre>
           <div class="card-grid">
             <article class="card">
               <h3>Using it in Cursor</h3>
-              <p>Cursor guide → verifier design → examples.</p>
+              <p>Cursor guide → how to choose a check → examples.</p>
             </article>
             <article class="card">
               <h3>Understanding the contract</h3>
-              <p>Goal contract + verifier design explain structure and proof authority.</p>
+              <p>Goal contract + check design explain structure and who decides done.</p>
             </article>
             <article class="card">
               <h3>Evaluating adoption</h3>
-              <p>Decision guide and FAQ: does the proof model fit your workflow?</p>
+              <p>Decision guide and FAQ: does this check model fit your workflow?</p>
             </article>
           </div>
         </section>
@@ -343,7 +343,7 @@ test -f generated/report.json</code></pre>
           <div class="card-grid">
             <article class="card">
               <h3>Before starting</h3>
-              <p>Bounded objective, matching verifier, Auto-run if unattended.</p>
+              <p>Bounded objective, matching check, Auto-run if unattended.</p>
             </article>
             <article class="card">
               <h3>When it keeps failing</h3>
@@ -351,7 +351,7 @@ test -f generated/report.json</code></pre>
             </article>
             <article class="card">
               <h3>When pass feels wrong</h3>
-              <p>Re-check whether the verifier proved the request or only a narrow proxy.</p>
+              <p>Re-check whether the check proved the request or only a narrow proxy.</p>
             </article>
           </div>
         </section>
@@ -364,12 +364,12 @@ test -f generated/report.json</code></pre>
               <p>Bounded and aligned — not a vague catch-all.</p>
             </article>
             <article class="card">
-              <h3>Verifier</h3>
+              <h3>Check</h3>
               <p>Proves the request; produces actionable failure output.</p>
             </article>
             <article class="card">
               <h3>Success claims</h3>
-              <p>A passing verifier proves only its own surface.</p>
+              <p>A passing check proves only what that check covers.</p>
             </article>
           </div>
         </section>
@@ -383,7 +383,7 @@ test -f generated/report.json</code></pre>
             </article>
             <article class="card">
               <h3>Critical paths have tests</h3>
-              <p>Pass/fail/abort/fail-open are covered in the current suite.</p>
+              <p>Pass, fail, abort, and fail-open are covered in the current suite.</p>
             </article>
             <article class="card">
               <h3>Limits stay explicit</h3>
@@ -401,11 +401,11 @@ test -f generated/report.json</code></pre>
             </article>
             <article class="card">
               <h3>Judgment over filler</h3>
-              <p>Teach how to choose and debug proof surfaces.</p>
+              <p>Teach how to choose and debug checks.</p>
             </article>
             <article class="card">
               <h3>Fewer claims, better defended</h3>
-              <p>Smaller product claims, clearer operator guidance.</p>
+              <p>Smaller product claims, clearer guidance for you.</p>
             </article>
           </div>
         </section>
@@ -451,12 +451,12 @@ test -f generated/report.json</code></pre>
         </section>
 
         <section id="backlog" aria-labelledby="backlog-title">
-          <h2 id="backlog-title">Non-goals</h2>
+          <h2 id="backlog-title">What it does not do</h2>
           <ul class="plain-list">
-            <li>No new agent platform or orchestration layer</li>
+            <li>No new agent platform or multi-agent system</li>
             <li>No dashboard or workflow marketplace</li>
-            <li>No claim that verifier success proves anything outside its surface</li>
-            <li>No promise that weak verification becomes trustworthy by repetition</li>
+            <li>No claim that a passing check proves anything outside what that check covers</li>
+            <li>No promise that a weak check becomes trustworthy by repetition</li>
           </ul>
         </section>
 

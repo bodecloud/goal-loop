@@ -1,58 +1,43 @@
 ---
 name: plan
-description: Draft a goal objective and verifier before activating Goal Loop.
+description: Draft a goal objective and check before activating Goal Loop.
 ---
 
 # Plan a Goal Loop
 
-Use this command when the user needs help shaping scope, success criteria, or verification before activating autonomous continuation.
+Use this command when the user needs help shaping scope, success criteria, or the check before activating the loop.
 
-`/plan` exists to improve loop quality before execution. It does not activate the stop hook and it does not start an active goal.
+This command drafts. It does not start the loop. Activation happens later with `/goal`.
 
-## What a Good Plan Must Contain
+## Required behavior
 
-Draft:
-
-- a concise objective
-- concrete success criteria
-- one or more verifier commands
-- important in-scope constraints
-- explicit non-goals when needed
-
-The plan should make the future `/goal` contract less ambiguous, not simply restate the user's prompt.
-
-## Required Behavior
-
-1. Translate the user's request into a bounded objective.
-2. Choose deterministic verifier commands wherever possible.
-3. Prefer shell verification over subjective completion promises.
+1. Understand the user's objective.
+2. Propose a bounded objective that a shell check can prove.
+3. Propose one or more concrete check commands.
 4. Write the draft with:
 
    ```bash
    node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" draft "<objective>" --verify "<command>"
    ```
 
-5. Present the draft clearly enough that the user can confirm or refine it.
-6. Ask the user to confirm before activating with `/goal`.
+5. Show the user the drafted objective and check.
+6. Tell the user how to activate with `/goal` once they accept the draft.
 
-## Planning Standards
+## Draft quality rules
 
-Good plan:
+A good draft has:
 
-- matches the real user request
-- exposes the proof surface explicitly
-- notes meaningful boundaries and exclusions
-- stays honest about what the verifier can and cannot prove
+- a specific objective
+- a check that matches that objective
+- limits that fit the expected work
 
-Weak plan:
+Prefer a narrow, honest draft over a broad, hard-to-prove one.
 
-- vague objective
-- generic verifier that does not prove the ask
-- hidden assumptions about scope
-- no distinction between required work and optional cleanup
+## What not to do
 
-## Activation Boundary
+Do not:
 
-Planning does not activate the stop-hook loop.
-
-Activation happens only through `/goal`. Do not treat a draft as an active goal unless the user explicitly wants to start execution.
+- activate the goal yourself
+- invent a check that cannot fail
+- expand the request into unrelated work
+- treat the draft as proof that the work is done

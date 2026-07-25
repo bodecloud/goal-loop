@@ -1,12 +1,12 @@
-# Examples and Usage Patterns
+# Examples and usage patterns
 
-This document shows how to use Goal Loop well, not just how to make it run.
+These examples show how to use Goal Loop well, not just how to start it.
 
-The theme across all examples is the same: keep the objective clear, keep the verifier honest, and keep the proof surface aligned with what the user actually asked for.
+In every case: keep the objective clear, pick a check that matches what you actually asked for, and treat that check as the gate that decides when the work is done.
 
-## Example 1: File Creation Proof
+## Example 1: Prove the loop is wired
 
-This is the fastest way to prove the loop itself is wired correctly:
+Fastest way to confirm Goal Loop itself works:
 
 ```text
 /goal Create .cursor/goal/proof.txt --verify "test -f .cursor/goal/proof.txt"
@@ -14,20 +14,15 @@ This is the fastest way to prove the loop itself is wired correctly:
 
 Expected behavior:
 
-1. First verifier run fails if the file does not exist.
+1. First check fails if the file is missing.
 2. The hook returns a `followup_message`.
 3. The agent creates the file.
-4. The next verifier run passes.
-5. The goal transitions to `completed`.
+4. The next check passes.
+5. The goal becomes `completed`.
 
-Why this example matters:
+Why this verifier fits: it only asks whether the file exists, which is exactly the job. It also exercises the full path — command, hook, failed continuation, and successful stop.
 
-- it tests the command path
-- it tests hook execution
-- it tests failed-verifier continuation
-- it tests successful stop behavior
-
-## Example 2: Build Repair
+## Example 2: Fix a broken build
 
 ```text
 /goal Fix the app build --verify "npm run build"
@@ -35,15 +30,17 @@ Why this example matters:
 
 Use this when:
 
-- the user's real request is "make the project build again"
-- build health is the correct completion authority
+- the real ask is "make the project build again"
+- a passing build is enough to call the work done
 
 Do not use this if:
 
 - the bug can ship while the build still passes
-- the real issue is runtime behavior not covered by the build
+- the real issue is runtime behavior the build does not cover
 
-## Example 3: Focused Test Repair
+Why this verifier fits: build health is the outcome you care about, so `npm run build` is the right gate.
+
+## Example 3: Fix a focused test failure
 
 ```text
 /goal Fix auth regression --verify "npm test -- --testPathPattern=auth"
@@ -52,12 +49,12 @@ Do not use this if:
 Use this when:
 
 - the failure is localized
-- the full test suite is expensive
-- the user asked for a bounded defect fix
+- the full suite is expensive
+- you asked for a bounded defect fix
 
-This is usually a better first verifier than an entire monorepo test suite.
+Why this verifier fits: a focused auth test proves the regression without paying for an entire monorepo suite every turn. Prefer this over the full suite as a first gate.
 
-## Example 4: Sequential Verification
+## Example 4: Run checks in sequence
 
 ```text
 /goal Finish the release fix --verify "npm test" --verify "npm run build"
@@ -65,15 +62,17 @@ This is usually a better first verifier than an entire monorepo test suite.
 
 Behavior:
 
-- commands run in order
+- commands run one after another
 - the first failing command stops the run
-- later commands do not execute after a failure
+- later commands do not run after a failure
 
-Use this when both conditions are genuinely part of "done".
+Use this when both conditions are truly part of "done".
 
-Do not stack commands merely because they exist. Every added command increases loop cost.
+Do not stack commands just because they exist. Every added command costs another loop turn when it fails.
 
-## Example 5: Shared Project Default
+Why these verifiers fit: release readiness needs both tests and a build, so both must pass before the goal can complete.
+
+## Example 5: Share a project default
 
 If a repository always treats `npm run build` as the minimum release gate:
 
@@ -87,30 +86,32 @@ If a repository always treats `npm run build` as the minimum release gate:
 }
 ```
 
-Then operators can run:
+Then you can run:
 
 ```text
 /goal Fix the docs build
 ```
 
-That keeps normal usage short while preserving deterministic completion.
+Why this verifier fits: the repo already agreed that a passing build is the baseline gate, so you can omit `--verify` and still get a repeatable check.
 
-## Example 6: Custom Smoke Probe
+## Example 6: Custom smoke probe
 
 ```text
 /goal Fix static export route behavior --verify "scripts/smoke-check.sh"
 ```
 
-Use this when the real proof surface is not captured by compile or unit-test gates alone.
+Use this when compile or unit tests alone do not prove the real risk.
 
 Good smoke probes:
 
 - return clean exit codes
 - print useful failure context
-- stay deterministic
+- stay repeatable
 - target the exact risk being fixed
 
-## Example 7: Using Goal Loop on Goal Loop
+Why this verifier fits: route behavior is the ask, so a dedicated smoke script is a stronger gate than a generic build.
+
+## Example 7: Use Goal Loop on Goal Loop
 
 Goal Loop can dogfood itself:
 
@@ -118,15 +119,15 @@ Goal Loop can dogfood itself:
 /goal Improve the documentation site --verify "npm run docs:check"
 ```
 
-This is valid only if `docs:check` actually proves the required surface. If the user asked for content quality, structure, and accuracy, a file-existence check alone is too weak.
+This is valid only if `docs:check` actually proves what you asked for. If you wanted content quality, structure, and accuracy, a file-existence check alone is too weak.
 
-That is the general rule: the verifier must match the real ask.
+General rule: the check must match the real ask.
 
-## Anti-Patterns
+## Anti-patterns
 
-These are mechanically valid but operationally weak.
+These commands are valid, but they are weak in practice.
 
-### Anti-pattern 1: Verifier too broad
+### Anti-pattern 1: Check too broad
 
 ```text
 /goal Fix a single typo --verify "npm test"
@@ -134,13 +135,13 @@ These are mechanically valid but operationally weak.
 
 Possible, but wasteful if the typo has nothing to do with the full suite.
 
-### Anti-pattern 2: Verifier too weak
+### Anti-pattern 2: Check too weak
 
 ```text
 /goal Fix production auth flow --verify "npm run lint"
 ```
 
-This only makes sense if lint is genuinely the completion authority. Usually it is not.
+This only makes sense if lint truly decides when the work is done. Usually it does not.
 
 ### Anti-pattern 3: Objective too vague
 
@@ -148,38 +149,45 @@ This only makes sense if lint is genuinely the completion authority. Usually it 
 /goal Make the app better --verify "npm run build"
 ```
 
-The loop can run, but the scope is underspecified and the verifier proves very little relative to the request.
+The loop can run, but the scope is unclear and the check proves very little relative to the request.
 
-### Anti-pattern 4: Flaky verifier
+### Anti-pattern 4: Flaky check
 
 ```text
 /goal Fix deployment reliability --verify "curl https://flaky-service.example.com"
 ```
 
-If the command fails for reasons unrelated to the code change, the loop becomes noisy and misleading.
+If the command fails for reasons unrelated to your code change, the loop becomes noisy and misleading.
 
-## Choosing Between Explicit and Default Verifiers
+## Explicit `--verify` vs defaults
 
 Use explicit `--verify` when:
 
 - the request is unusual
-- the verifier is task-specific
+- the check is task-specific
 - you want the active goal to document the exact gate for this run
 
-Use `defaults.json` when:
+Use `.cursor/goal/defaults.json` when:
 
 - the repo has a standard baseline gate
-- most goals in that repo should use the same verifier
+- most goals in that repo should use the same check
 
-## Reading Examples Correctly
+## How to read these examples
 
-Every example in this file is a pattern, not a shortcut around thought.
+Every example here is a pattern, not a shortcut around thought.
 
 Before starting a real goal, ask:
 
-- What exactly is the user asking to be true?
-- What command can mechanically prove that?
+- What exactly must be true when you are done?
+- What command can prove that by passing or failing?
 - Is that command narrow enough to rerun every turn?
 - Is it strong enough to prove the real requested outcome?
 
-If those answers are weak, improve the verifier before starting the loop.
+If those answers are weak, improve the check before starting the loop.
+
+## Related docs
+
+- [Verifier design](verifier-design.md)
+- [Operator checklists](operator-checklists.md)
+- [Troubleshooting](troubleshooting.md)
+- [FAQ](faq.md)

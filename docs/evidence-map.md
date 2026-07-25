@@ -1,10 +1,10 @@
-# Implementation Evidence Map
+# Evidence map
 
-This page maps the most important documentation claims to the current code and tests that support them.
+This page maps important documentation claims to the code and tests that back them.
 
-It exists for readers who want stronger grounding than explanatory prose alone. Goal Loop is a small product, so its critical behavior should be traceable directly to the implementation.
+Use it when you want grounding stronger than prose. Goal Loop is small, so its critical behavior should be traceable to the implementation.
 
-## Core Product Claim: Completion Authority Lives in the Verifier
+## The check decides when the work is done
 
 Supporting implementation:
 
@@ -13,10 +13,10 @@ Supporting implementation:
 
 Why this supports the claim:
 
-- `goal-stop.mjs` reruns verifier commands after completed turns
+- `goal-stop.mjs` reruns the check commands after completed turns
 - on success it marks the goal `completed` and returns `{}`
 - on failure it returns `followup_message`
-- the skill explicitly tells the agent not to self-declare success
+- the skill tells the agent not to declare itself done
 
 Supporting tests:
 
@@ -24,11 +24,11 @@ Supporting tests:
 
 Covered behaviors:
 
-- passing verifier marks goal completed
-- failing verifier returns `followup_message`
+- passing check marks goal completed
+- failing check returns `followup_message`
 - no active goal returns `{}`
 
-## Core Product Claim: Runtime State Is Project-Local
+## Runtime state lives in the project
 
 Supporting implementation:
 
@@ -53,10 +53,10 @@ Supporting repo convention:
 
 Why this supports the claim:
 
-- mutable loop state is ignored by default in the current repo
+- mutable loop state is ignored by default in this repo
 - shared defaults are not ignored by default
 
-## Core Product Claim: Active Goals Require a Verifier
+## Active goals require a check
 
 Supporting implementation:
 
@@ -64,7 +64,7 @@ Supporting implementation:
 
 Why this supports the claim:
 
-- `createGoal()` rejects active goals with no explicit or default verifier commands
+- `createGoal()` rejects active goals with no explicit or default check commands
 - `validateGoal()` rejects active goal state with empty `verify.commands`
 
 Supporting tests:
@@ -73,9 +73,9 @@ Supporting tests:
 
 Covered behavior:
 
-- active goal without verifier is rejected
+- active goal without a check is rejected
 
-## Core Product Claim: Verification Runs Sequentially and Stops on First Failure
+## Checks run one after another and stop at the first failure
 
 Supporting implementation:
 
@@ -83,14 +83,14 @@ Supporting implementation:
 
 Why this supports the claim:
 
-- `runVerify()` loops through verifier commands in order
+- `runVerify()` loops through check commands in order
 - it breaks immediately when a command result is not `ok`
 
 Documentation implication:
 
-- later verifier commands do not run once an earlier command fails
+- later check commands do not run once an earlier command fails
 
-## Core Product Claim: The Loop Is Guarded by Iteration, Wall-Clock, and Timeout Limits
+## The loop is guarded by iteration, wall-clock, and timeout limits
 
 Supporting implementation:
 
@@ -102,7 +102,7 @@ Why this supports the claim:
 
 - `hooks/hooks.json` sets Cursor-side `loop_limit: 20`
 - `goal-stop.mjs` aborts on `max_iterations` and `max_wall_ms`
-- verifier commands are run with per-command timeouts from `verify.timeout_ms`
+- check commands run with per-command timeouts from `verify.timeout_ms`
 
 Supporting tests:
 
@@ -112,7 +112,7 @@ Covered behavior:
 
 - max-iteration abort path
 
-## Core Product Claim: Hook Errors Fail Open
+## Hook errors fail open
 
 Supporting implementation:
 
@@ -129,9 +129,9 @@ Supporting tests:
 
 Covered behavior:
 
-- malformed input writes hook error log and returns `{}`
+- malformed input writes the hook error log and returns `{}`
 
-## Core Product Claim: Defaults Are a Policy Surface, Not Required State
+## Defaults are optional policy, not required state
 
 Supporting implementation:
 
@@ -139,7 +139,7 @@ Supporting implementation:
 
 Why this supports the claim:
 
-- defaults are loaded from `.cursor/goal/defaults.json` if present
+- defaults load from `.cursor/goal/defaults.json` if present
 - missing defaults fall back to hardcoded values
 - explicit flags override defaults
 
@@ -149,9 +149,9 @@ Supporting tests:
 
 Covered behavior:
 
-- start uses project defaults when verifier is omitted
+- start uses project defaults when the check is omitted
 
-## Core Product Claim: Abort Has Two Meanings
+## Abort has two meanings
 
 Supporting implementation:
 
@@ -171,13 +171,13 @@ Covered behavior:
 
 - abort marks an active goal aborted
 
-## What This Page Does Not Prove
+## What this repo proves, and what it doesn't
 
 This evidence map proves current implementation behavior inside this repository. It does not prove:
 
 - marketplace publication state
-- Cursor UI behavior beyond the documented hook contract
-- that a chosen verifier is semantically sufficient for every human request
-- exact conformance to any missing external guide not present in the current repo context
+- the current Cursor IDE local-plugin experience beyond the plugin shape in this repo
+- that a chosen check is semantically enough for every human request
+- exact conformance to any external guide not present in this repo
 
-Those boundaries matter. The point of this page is traceability, not overclaiming.
+Those limits matter. The point of this page is traceability, not overclaiming.
