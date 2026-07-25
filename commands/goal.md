@@ -32,9 +32,10 @@ If the request is vague, expand it into a precise objective before writing the g
    node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" start "<objective>" --verify "<command>"
    ```
 
-6. Load the `cursor-goal` skill.
-7. Tell the user that Cursor Agent Auto-run is required for unattended continuation.
-8. Start working on the objective immediately.
+6. If the printed JSON includes `warnings`, relay them to the user in plain language and suggest a stronger check. Coaching is advisory only — if the user proceeds with the chosen check, keep it exactly as written.
+7. Load the `cursor-goal` skill.
+8. Tell the user that Cursor Agent Auto-run is required for unattended continuation.
+9. Start working on the objective immediately.
 
 ## Objective quality rules
 

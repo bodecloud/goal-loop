@@ -3,14 +3,21 @@ import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import {
   ACTIVE_PATH,
+  appendProgressEntry,
+  computeFailureSignature,
   ensureGoalDirs,
   logPathForIteration,
+  nowIso,
   readJsonFile,
+  RUNS_DIR,
   validateGoal,
   writeJsonFile
 } from "../scripts/goal-lib.mjs";
 
 const MAX_FOLLOWUP_LOG_CHARS = 6000;
+const DEFAULT_VERIFY_TIMEOUT_MS = 600000;
+const DEFAULT_MAX_REPEAT_FAILURES = 3;
+const HOOK_ERROR_LOG = `${RUNS_DIR}/hook-errors.log`;
 
 async function readStdin() {
   let input = "";
@@ -27,8 +34,8 @@ function printHookResult(value) {
 function appendHookError(error) {
   ensureGoalDirs();
   appendFileSync(
-    ".cursor/goal/runs/hook-errors.log",
-    `[${new Date().toISOString()}] ${error.stack || error.message || String(error)}\n`,
+    HOOK_ERROR_LOG,
+    `[${nowIso()}] ${error.stack || error.message || String(error)}\n`,
     "utf8"
   );
 }
@@ -50,6 +57,17 @@ function runCommand(command, { cwd, timeoutMs }) {
       setTimeout(() => child.kill("SIGKILL"), 2000).unref();
     }, timeoutMs);
 
+    function settle(result) {
+      clearTimeout(timer);
+      resolve({
+        command,
+        timed_out: timedOut,
+        duration_ms: Date.now() - startedAt,
+        output,
+        ...result
+      });
+    }
+
     child.stdout.on("data", (chunk) => {
       output += chunk.toString();
     });
@@ -57,34 +75,17 @@ function runCommand(command, { cwd, timeoutMs }) {
       output += chunk.toString();
     });
     child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({
-        command,
-        ok: false,
-        exit_code: null,
-        timed_out: timedOut,
-        duration_ms: Date.now() - startedAt,
-        output: error.message
-      });
+      settle({ ok: false, exit_code: null, output: error.message });
     });
     child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      resolve({
-        command,
-        ok: code === 0 && !timedOut,
-        exit_code: code,
-        signal,
-        timed_out: timedOut,
-        duration_ms: Date.now() - startedAt,
-        output
-      });
+      settle({ ok: code === 0 && !timedOut, exit_code: code, signal });
     });
   });
 }
 
 async function runVerify(goal) {
   const cwd = goal.verify.cwd || ".";
-  const timeoutMs = goal.verify.timeout_ms || 600000;
+  const timeoutMs = goal.verify.timeout_ms || DEFAULT_VERIFY_TIMEOUT_MS;
   const command_results = [];
   let combinedLog = "";
 
@@ -117,10 +118,18 @@ async function runVerify(goal) {
 }
 
 function tail(text, maxChars) {
-  if (text.length <= maxChars) {
-    return text;
+  return text.slice(-maxChars);
+}
+
+function primaryFailureReason(result) {
+  const failed = result.command_results.find((item) => !item.ok);
+  if (!failed) {
+    return "check failed";
   }
-  return text.slice(text.length - maxChars);
+  if (failed.timed_out) {
+    return `timed out: ${failed.command}`;
+  }
+  return `exit ${failed.exit_code}: ${failed.command}`;
 }
 
 function buildFollowup(goal, result, logPath) {
@@ -140,6 +149,28 @@ ${tail(result.combinedLog, MAX_FOLLOWUP_LOG_CHARS)}
 Read the log, fix the root cause, avoid repeating the same failed approach, and end the turn only when the implementation is ready for the hook to verify again. Do not declare success yourself; the Goal Loop hook is the authority.`;
 }
 
+function applyRepeatFailureTracking(goal, result) {
+  const signature = computeFailureSignature(result.exit_codes, result.combinedLog);
+  if (signature && signature === goal.last_failure_signature) {
+    goal.repeat_failure_count = (goal.repeat_failure_count || 0) + 1;
+  } else {
+    goal.last_failure_signature = signature;
+    goal.repeat_failure_count = 1;
+  }
+
+  const configured = goal.limits.max_repeat_failures;
+  const threshold =
+    typeof configured === "number" && configured > 0 ? configured : DEFAULT_MAX_REPEAT_FAILURES;
+
+  if (goal.repeat_failure_count >= threshold) {
+    goal.status = "blocked";
+    goal.blocked_at = nowIso();
+    goal.blocked_reason = primaryFailureReason(result);
+    return true;
+  }
+  return false;
+}
+
 async function main() {
   try {
     const input = await readStdin();
@@ -155,6 +186,7 @@ async function main() {
     }
 
     const goal = validateGoal(rawGoal);
+    // paused, blocked, completed, aborted, draft — never run the check.
     if (goal.status !== "active") {
       printHookResult({});
       return;
@@ -164,11 +196,11 @@ async function main() {
     const startedAtMs = Date.parse(goal.started_at);
     const wallMs = Number.isFinite(startedAtMs) ? Date.now() - startedAtMs : 0;
 
-    if (goal.iteration > goal.limits.max_iterations || wallMs > goal.limits.max_wall_ms) {
+    const overIterations = goal.iteration > goal.limits.max_iterations;
+    if (overIterations || wallMs > goal.limits.max_wall_ms) {
       goal.status = "aborted";
-      goal.aborted_at = new Date().toISOString();
-      goal.abort_reason =
-        goal.iteration > goal.limits.max_iterations ? "max_iterations" : "max_wall_ms";
+      goal.aborted_at = nowIso();
+      goal.abort_reason = overIterations ? "max_iterations" : "max_wall_ms";
       writeJsonFile(ACTIVE_PATH, goal);
       printHookResult({});
       return;
@@ -180,7 +212,7 @@ async function main() {
     const logBody = [
       `Goal: ${goal.objective}`,
       `Iteration: ${goal.iteration}`,
-      `Started: ${new Date().toISOString()}`,
+      `Started: ${nowIso()}`,
       result.combinedLog
     ].join("\n");
     appendFileSync(logPath, logBody, "utf8");
@@ -190,18 +222,35 @@ async function main() {
       exit_codes: result.exit_codes,
       command_results: result.command_results,
       log_path: logPath,
-      completed_at: new Date().toISOString()
+      completed_at: nowIso()
     };
+
+    appendProgressEntry(goal, {
+      iteration: goal.iteration,
+      ok: result.ok,
+      exit_codes: result.exit_codes,
+      reason: result.ok ? "check passed" : primaryFailureReason(result),
+      log_path: logPath
+    });
 
     if (result.ok) {
       goal.status = "completed";
-      goal.completed_at = new Date().toISOString();
+      goal.completed_at = nowIso();
+      goal.repeat_failure_count = 0;
+      goal.last_failure_signature = null;
       writeJsonFile(ACTIVE_PATH, goal);
       printHookResult({});
       return;
     }
 
+    const blocked = applyRepeatFailureTracking(goal, result);
     writeJsonFile(ACTIVE_PATH, goal);
+    if (blocked) {
+      // Honest stop — do not continue the agent.
+      printHookResult({});
+      return;
+    }
+
     printHookResult({
       followup_message: buildFollowup(goal, result, logPath)
     });

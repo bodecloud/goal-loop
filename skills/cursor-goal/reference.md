@@ -48,8 +48,12 @@ Guidance:
 
 - `draft`: planned but not active
 - `active`: stop hook will run the check and continue on failure
+- `paused`: stop hook skips the check; resume with `/goal-resume`
+- `blocked`: same failure repeated enough times; honest stop, resumable after intervention
 - `completed`: check passed and the loop is done
 - `aborted`: loop stopped without a passing check
+
+The contract may also carry a bounded `progress` array and optional fields like `blocked_reason` and `repeat_failure_count`. Older files without those fields still validate.
 
 ## Check contract
 
@@ -84,6 +88,7 @@ Failure requiring another turn:
 - Cursor hook `loop_limit: 20`
 - goal-level `limits.max_iterations`
 - goal-level `limits.max_wall_ms`
+- goal-level `limits.max_repeat_failures` (default 3) for earned `blocked`
 - per-command `verify.timeout_ms`
 - fail-open hook error handling via `.cursor/goal/runs/hook-errors.log`
 

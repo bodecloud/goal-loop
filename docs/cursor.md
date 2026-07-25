@@ -27,6 +27,8 @@ goal-loop/
 │   ├── goal.md
 │   ├── plan.md
 │   ├── goal-status.md
+│   ├── goal-pause.md
+│   ├── goal-resume.md
 │   └── goal-abort.md
 ├── skills/cursor-goal/
 ├── agents/goal-verifier.md
@@ -166,7 +168,7 @@ If you do not see that state change, capture:
 
 Then file an issue.
 
-## Abort modes
+## Abort, pause, and blocked
 
 `/goal-abort` has two meanings:
 
@@ -174,6 +176,10 @@ Then file an issue.
 - remove state: delete `active.json` completely
 
 The default is soft abort because it keeps an audit trail. Use `--remove` when you want the state erased.
+
+`/goal-pause` keeps the goal and its progress but stops the hook from running the check or continuing the agent. `/goal-resume` returns a paused or blocked goal to `active` without resetting iteration or limits.
+
+When the same check failure repeats across consecutive iterations (default 3), the hook enters `blocked`. That is an honest stop — the objective was not met — and is resumable after you intervene.
 
 ## Recommended repository conventions
 
@@ -193,7 +199,7 @@ Practical guidance:
 - Scope the objective tightly.
 - Choose the narrowest check that still proves the job.
 - Do not use Goal Loop when "done" is purely subjective.
-- If the same failure repeats, read the log instead of letting the loop churn.
+- If the same failure repeats, read the log instead of letting the loop churn. After enough identical failures the loop will enter `blocked` on its own.
 
 ## Related docs
 

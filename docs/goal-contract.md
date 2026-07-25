@@ -45,17 +45,22 @@ The loop is easier to trust when you can read its state directly.
 | Field | Meaning |
 | --- | --- |
 | `version` | Contract schema version. v0.1.0 supports only `1`. |
-| `status` | Goal state: `draft`, `active`, `completed`, or `aborted`. |
+| `status` | Goal state: `draft`, `active`, `paused`, `blocked`, `completed`, or `aborted`. |
 | `objective` | Human-readable target for the agent. |
 | `verify.commands` | Shell commands run one after another after each completed turn. |
 | `verify.cwd` | Working directory used when spawning those commands. |
 | `verify.timeout_ms` | Timeout per command. |
 | `limits.max_iterations` | Maximum number of hook verification attempts. |
 | `limits.max_wall_ms` | Maximum allowed elapsed wall time since `started_at`. |
+| `limits.max_repeat_failures` | Optional. Consecutive identical failures before `blocked` (default 3). |
 | `completion_promise` | Reserved field for future non-shell completion modes. It is currently not used by the loop logic. |
 | `started_at` | ISO timestamp for loop start. |
 | `iteration` | Number of verification attempts already consumed. |
 | `last_verify` | Latest check result object, or `null` if a check has not run yet. |
+| `progress` | Optional bounded array of compact per-iteration entries (outcome, exit codes, reason, log path). |
+| `paused_at` / `blocked_at` | Optional timestamps when the goal entered those states. |
+| `blocked_reason` | Optional short description of what is blocking. |
+| `last_failure_signature` / `repeat_failure_count` | Optional repeat-failure tracking used to earn `blocked`. |
 
 ## How status values behave
 
@@ -70,6 +75,18 @@ The loop is easier to trust when you can read its state directly.
 - live loop state
 - stop hook validates and runs the check
 - must have at least one command that either passes or fails
+
+### `paused`
+
+- set by `/goal-pause`
+- stop hook returns `{}` and does not run the check
+- iteration and limits are retained for `/goal-resume`
+
+### `blocked`
+
+- earned when the same check failure repeats across consecutive iterations (default 3)
+- honest stop: the objective was not met
+- resumable with `/goal-resume` after the user intervenes
 
 ### `completed`
 
@@ -87,7 +104,7 @@ The loop is easier to trust when you can read its state directly.
 The code currently enforces these rules:
 
 - `version` must equal `1`
-- `status` must be one of `active`, `draft`, `completed`, `aborted`
+- `status` must be one of `active`, `draft`, `completed`, `aborted`, `paused`, `blocked`
 - `objective` must be a non-empty string
 - `verify` must be an object
 - `verify.cwd` must be a non-empty string
@@ -96,6 +113,7 @@ The code currently enforces these rules:
 - `limits.max_wall_ms` must be a positive integer
 - `iteration` must be a non-negative integer
 - `active` goals must have at least one non-empty command
+- optional trust-and-control fields (`progress`, `blocked_reason`, `repeat_failure_count`, and similar) are tolerated when absent so older files still validate
 
 Whitespace-only commands are removed during normalization.
 
@@ -245,11 +263,15 @@ Other valid paths:
 
 ```text
 draft -> abandoned manually
+active -> paused -> active
+active -> blocked -> active
 active -> aborted
 active -> completed
 ```
 
 There is currently no built-in command that promotes a `draft` to `active`. Activation happens through `/goal`, not automatically through `/plan`.
+
+When `/goal` or `/plan` create a goal, `goalctl` may print advisory `warnings` if the check looks too weak for the objective. Those warnings never change the check the user chose.
 
 ## Practical implications
 
