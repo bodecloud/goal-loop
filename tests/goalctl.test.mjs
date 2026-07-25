@@ -103,3 +103,87 @@ test("active goal without verifier is rejected", () => {
     project.cleanup();
   }
 });
+
+test("pause sets paused status and retains iteration", () => {
+  const project = tempProject();
+  try {
+    assert.equal(runGoalctl(project.dir, ["start", "Hold me", "--verify", "true"]).status, 0);
+    const activePath = resolve(project.dir, ".cursor/goal/active.json");
+    const before = readJson(activePath);
+    before.iteration = 4;
+    writeFileSync(activePath, `${JSON.stringify(before, null, 2)}\n`);
+
+    const result = runGoalctl(project.dir, ["pause"]);
+    assert.equal(result.status, 0, result.stderr);
+    const active = readJson(activePath);
+    assert.equal(active.status, "paused");
+    assert.equal(active.iteration, 4);
+    assert.deepEqual(active.verify.commands, ["true"]);
+    assert.ok(active.paused_at);
+  } finally {
+    project.cleanup();
+  }
+});
+
+test("resume restores paused goal to active at same iteration", () => {
+  const project = tempProject();
+  try {
+    assert.equal(runGoalctl(project.dir, ["start", "Hold me", "--verify", "true"]).status, 0);
+    const activePath = resolve(project.dir, ".cursor/goal/active.json");
+    const before = readJson(activePath);
+    before.iteration = 4;
+    writeFileSync(activePath, `${JSON.stringify(before, null, 2)}\n`);
+    assert.equal(runGoalctl(project.dir, ["pause"]).status, 0);
+
+    const result = runGoalctl(project.dir, ["resume"]);
+    assert.equal(result.status, 0, result.stderr);
+    const active = readJson(activePath);
+    assert.equal(active.status, "active");
+    assert.equal(active.iteration, 4);
+    assert.equal(active.paused_at, undefined);
+  } finally {
+    project.cleanup();
+  }
+});
+
+test("pause with no active goal returns a clear message", () => {
+  const project = tempProject();
+  try {
+    const result = runGoalctl(project.dir, ["pause"]);
+    assert.equal(result.status, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.ok, false);
+    assert.match(parsed.message, /No active goal/);
+  } finally {
+    project.cleanup();
+  }
+});
+
+test("resume on active goal is a clear no-op error", () => {
+  const project = tempProject();
+  try {
+    assert.equal(runGoalctl(project.dir, ["start", "Already going", "--verify", "true"]).status, 0);
+    const result = runGoalctl(project.dir, ["resume"]);
+    assert.equal(result.status, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.ok, false);
+    assert.match(parsed.message, /already active/i);
+  } finally {
+    project.cleanup();
+  }
+});
+
+test("pause on already-paused goal is a clear no-op", () => {
+  const project = tempProject();
+  try {
+    assert.equal(runGoalctl(project.dir, ["start", "Hold me", "--verify", "true"]).status, 0);
+    assert.equal(runGoalctl(project.dir, ["pause"]).status, 0);
+    const result = runGoalctl(project.dir, ["pause"]);
+    assert.equal(result.status, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.ok, true);
+    assert.match(parsed.message, /already paused/i);
+  } finally {
+    project.cleanup();
+  }
+});

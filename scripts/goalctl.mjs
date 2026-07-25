@@ -15,6 +15,8 @@ function usage() {
   node scripts/goalctl.mjs start <objective> [--verify <cmd>]... [--cwd <dir>] [--timeout-ms <ms>]
   node scripts/goalctl.mjs draft <objective> [--verify <cmd>]...
   node scripts/goalctl.mjs status
+  node scripts/goalctl.mjs pause
+  node scripts/goalctl.mjs resume
   node scripts/goalctl.mjs abort [--remove]
 `;
 }
@@ -112,6 +114,67 @@ function main() {
       return;
     }
     printJson({ ok: true, active: true, goal: goalSummary(validateGoal(active)) });
+    return;
+  }
+
+  if (command === "pause") {
+    if (!existsSync(ACTIVE_PATH)) {
+      printJson({ ok: false, active: false, message: "No active goal to pause." });
+      return;
+    }
+    const goal = validateGoal(readJsonFile(ACTIVE_PATH));
+    if (goal.status === "paused") {
+      printJson({ ok: true, active: true, message: "Goal is already paused.", goal: goalSummary(goal) });
+      return;
+    }
+    if (goal.status !== "active") {
+      printJson({
+        ok: false,
+        active: true,
+        message: `Cannot pause a goal with status "${goal.status}". Only active goals can be paused.`,
+        goal: goalSummary(goal)
+      });
+      return;
+    }
+    goal.status = "paused";
+    goal.paused_at = new Date().toISOString();
+    writeJsonFile(ACTIVE_PATH, goal);
+    printJson({ ok: true, active: true, goal: goalSummary(goal) });
+    return;
+  }
+
+  if (command === "resume") {
+    if (!existsSync(ACTIVE_PATH)) {
+      printJson({ ok: false, active: false, message: "No goal to resume." });
+      return;
+    }
+    const goal = validateGoal(readJsonFile(ACTIVE_PATH));
+    if (goal.status === "active") {
+      printJson({
+        ok: false,
+        active: true,
+        message: "Goal is already active.",
+        goal: goalSummary(goal)
+      });
+      return;
+    }
+    if (goal.status !== "paused" && goal.status !== "blocked") {
+      printJson({
+        ok: false,
+        active: true,
+        message: `Cannot resume a goal with status "${goal.status}". Resume works on paused or blocked goals.`,
+        goal: goalSummary(goal)
+      });
+      return;
+    }
+    goal.status = "active";
+    delete goal.paused_at;
+    delete goal.blocked_at;
+    delete goal.blocked_reason;
+    goal.repeat_failure_count = 0;
+    goal.last_failure_signature = null;
+    writeJsonFile(ACTIVE_PATH, goal);
+    printJson({ ok: true, active: true, goal: goalSummary(goal) });
     return;
   }
 
