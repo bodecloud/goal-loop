@@ -187,3 +187,74 @@ test("pause on already-paused goal is a clear no-op", () => {
     project.cleanup();
   }
 });
+
+test("status includes trend for paused and blocked goals", () => {
+  const project = tempProject();
+  try {
+    assert.equal(runGoalctl(project.dir, ["start", "Watch me", "--verify", "true"]).status, 0);
+    assert.equal(runGoalctl(project.dir, ["pause"]).status, 0);
+    let result = runGoalctl(project.dir, ["status"]);
+    assert.equal(result.status, 0, result.stderr);
+    let parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.goal.status, "paused");
+    assert.equal(parsed.goal.trend, "paused");
+
+    const activePath = resolve(project.dir, ".cursor/goal/active.json");
+    const goal = readJson(activePath);
+    goal.status = "blocked";
+    goal.blocked_reason = "exit 1: npm test";
+    goal.blocked_at = new Date().toISOString();
+    goal.last_verify = {
+      ok: false,
+      exit_codes: [1],
+      command_results: [],
+      log_path: ".cursor/goal/runs/003.log",
+      completed_at: new Date().toISOString()
+    };
+    writeFileSync(activePath, `${JSON.stringify(goal, null, 2)}\n`);
+
+    result = runGoalctl(project.dir, ["status"]);
+    assert.equal(result.status, 0, result.stderr);
+    parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.goal.status, "blocked");
+    assert.equal(parsed.goal.trend, "blocked");
+    assert.equal(parsed.goal.blocked_reason, "exit 1: npm test");
+    assert.equal(parsed.goal.log_path, ".cursor/goal/runs/003.log");
+  } finally {
+    project.cleanup();
+  }
+});
+
+test("start warns on weak existence-only check but still creates the goal", () => {
+  const project = tempProject();
+  try {
+    const result = runGoalctl(project.dir, [
+      "start",
+      "make the login page accessible",
+      "--verify",
+      "test -f login.html"
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.warnings.length, 1);
+    assert.match(parsed.warnings[0], /existence-only/i);
+    const active = readJson(resolve(project.dir, ".cursor/goal/active.json"));
+    assert.equal(active.status, "active");
+    assert.deepEqual(active.verify.commands, ["test -f login.html"]);
+  } finally {
+    project.cleanup();
+  }
+});
+
+test("start with topical build check returns no warnings", () => {
+  const project = tempProject();
+  try {
+    const result = runGoalctl(project.dir, ["start", "fix build", "--verify", "npm run build"]);
+    assert.equal(result.status, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.deepEqual(parsed.warnings, []);
+  } finally {
+    project.cleanup();
+  }
+});

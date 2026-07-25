@@ -3,6 +3,7 @@ import { existsSync, rmSync } from "node:fs";
 import {
   ACTIVE_PATH,
   DRAFT_PATH,
+  assessCheckStrength,
   createGoal,
   ensureGoalDirs,
   readJsonFile,
@@ -76,15 +77,52 @@ function printJson(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function deriveTrend(goal) {
+  if (goal.status === "paused") return "paused";
+  if (goal.status === "blocked") return "blocked";
+  if (goal.status === "completed") return "completed";
+  if (goal.status === "aborted") return "aborted";
+  if (goal.status === "draft") return "draft";
+
+  const progress = Array.isArray(goal.progress) ? goal.progress : [];
+  if (progress.length === 0) {
+    return "progressing";
+  }
+  const recent = progress.slice(-3);
+  if (recent.length >= 2 && recent.every((entry) => entry.ok === false)) {
+    const signatures = recent.map((entry) =>
+      Array.isArray(entry.exit_codes) ? entry.exit_codes.join(",") : ""
+    );
+    if (signatures.every((sig) => sig === signatures[0])) {
+      return "stuck";
+    }
+  }
+  return "progressing";
+}
+
 function goalSummary(goal) {
-  return {
+  const summary = {
     status: goal.status,
     objective: goal.objective,
     iteration: goal.iteration,
     verify: goal.verify,
     limits: goal.limits,
-    last_verify: goal.last_verify ?? null
+    last_verify: goal.last_verify ?? null,
+    trend: deriveTrend(goal),
+    progress: Array.isArray(goal.progress) ? goal.progress : [],
+    progress_count: Array.isArray(goal.progress) ? goal.progress.length : 0
   };
+  if (goal.paused_at) summary.paused_at = goal.paused_at;
+  if (goal.blocked_at) summary.blocked_at = goal.blocked_at;
+  if (goal.blocked_reason) summary.blocked_reason = goal.blocked_reason;
+  if (goal.abort_reason) summary.abort_reason = goal.abort_reason;
+  if (goal.repeat_failure_count !== undefined) {
+    summary.repeat_failure_count = goal.repeat_failure_count;
+  }
+  if (goal.last_verify?.log_path) {
+    summary.log_path = goal.last_verify.log_path;
+  }
+  return summary;
 }
 
 function main() {
@@ -101,9 +139,15 @@ function main() {
       maxIterations: flags.maxIterations,
       maxWallMs: flags.maxWallMs
     });
+    const warnings = assessCheckStrength(goal.objective, goal.verify.commands);
     const targetPath = command === "start" ? ACTIVE_PATH : DRAFT_PATH;
     writeJsonFile(targetPath, goal);
-    printJson({ ok: true, path: targetPath, goal: goalSummary(goal) });
+    printJson({
+      ok: true,
+      path: targetPath,
+      goal: goalSummary(goal),
+      warnings
+    });
     return;
   }
 

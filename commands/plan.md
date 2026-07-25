@@ -20,8 +20,9 @@ This command drafts. It does not start the loop. Activation happens later with `
    node "${CURSOR_PLUGIN_ROOT}/scripts/goalctl.mjs" draft "<objective>" --verify "<command>"
    ```
 
-5. Show the user the drafted objective and check.
-6. Tell the user how to activate with `/goal` once they accept the draft.
+5. If the printed JSON includes `warnings`, relay them and suggest a stronger check. Do not rewrite the user's chosen check unless they ask.
+6. Show the user the drafted objective and check.
+7. Tell the user how to activate with `/goal` once they accept the draft.
 
 ## Draft quality rules
 
