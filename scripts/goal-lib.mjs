@@ -156,9 +156,13 @@ export function normalizeFailureLogTail(logText = "") {
     .replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\b/g, "<ts>")
     .replace(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\w+\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\b/gi, "<ts>")
     .replace(/(?:\/(?:[\w.-]+))+\/[\w.-]+/g, (match) => {
-      // Keep relative-looking short paths; strip long absolute-ish path prefixes.
+      // Keep the last two path segments so same-basename files in different
+      // directories still produce distinct signatures (prefer under-blocking).
       const parts = match.split("/").filter(Boolean);
-      return parts.length > 2 ? `<path>/${parts[parts.length - 1]}` : match;
+      if (parts.length <= 2) {
+        return match;
+      }
+      return `<path>/${parts.slice(-2).join("/")}`;
     })
     .replace(/\s+/g, " ")
     .trim()
@@ -194,7 +198,7 @@ export function appendProgressEntry(goal, entry) {
 }
 
 const BEHAVIORAL_OBJECTIVE =
-  /\b(fix|implement|make\b.+\bwork|accessible|pass(?:es|ing)?|behavio[u]?r|quality|correct|bug|test)\b/i;
+  /\b(fix|implement|make\b.+\bwork|accessible|pass(?:es|ing)?)\b/i;
 const EXISTENCE_ONLY_COMMAND = /^\s*(?:test\s+-[ef]|ls(?:\s|$)|stat(?:\s|$)|\[(?:\s+-?[ef]))/i;
 const EXISTENCE_OBJECTIVE = /\b(file|path|exist|create|generate|write|touch)\b/i;
 const TOPICAL_STOP_TOKENS = new Set([

@@ -223,3 +223,43 @@ test("start with topical build check returns no warnings", () => {
     assert.deepEqual(parsed.warnings, []);
   });
 });
+
+test("resume from blocked clears repeat-failure tracking", () => {
+  withProject((dir) => {
+    assert.equal(runGoalctl(dir, ["start", "Unstick me", "--verify", "true"]).status, 0);
+    const path = activePath(dir);
+    const goal = readJson(path);
+    goal.status = "blocked";
+    goal.blocked_at = new Date().toISOString();
+    goal.blocked_reason = "exit 1: npm test";
+    goal.repeat_failure_count = 3;
+    goal.last_failure_signature = "1|boom";
+    goal.iteration = 5;
+    writeJson(path, goal);
+
+    const result = runGoalctl(dir, ["resume"]);
+    assert.equal(result.status, 0, result.stderr);
+    const active = readJson(path);
+    assert.equal(active.status, "active");
+    assert.equal(active.iteration, 5);
+    assert.equal(active.repeat_failure_count, 0);
+    assert.equal(active.last_failure_signature, null);
+    assert.equal(active.blocked_reason, undefined);
+  });
+});
+
+test("status trend is stuck when repeat_failure_count is at least 2", () => {
+  withProject((dir) => {
+    assert.equal(runGoalctl(dir, ["start", "Watch trend", "--verify", "true"]).status, 0);
+    const path = activePath(dir);
+    const goal = readJson(path);
+    goal.repeat_failure_count = 2;
+    goal.last_failure_signature = "1|same";
+    writeJson(path, goal);
+
+    const result = runGoalctl(dir, ["status"]);
+    assert.equal(result.status, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.goal.trend, "stuck");
+  });
+});

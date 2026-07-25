@@ -91,6 +91,18 @@ test("failure signatures match for identical normalized tails", () => {
   assert.equal(a, b);
 });
 
+test("failure signatures keep parent directory so same basename differs", () => {
+  const auth = computeFailureSignature(
+    [1],
+    "TypeError in /home/u/proj/auth/service.js: boom"
+  );
+  const cart = computeFailureSignature(
+    [1],
+    "TypeError in /home/u/proj/cart/service.js: boom"
+  );
+  assert.notEqual(auth, cart);
+});
+
 test("failure signatures differ when exit codes or message change", () => {
   const base = computeFailureSignature([1], "boom");
   assert.notEqual(computeFailureSignature([2], "boom"), base);
@@ -127,5 +139,10 @@ test("assessCheckStrength warns on existence-only check for behavioral objective
 
 test("assessCheckStrength stays quiet for topical build check", () => {
   const warnings = assessCheckStrength("fix build", ["npm run build"]);
+  assert.deepEqual(warnings, []);
+});
+
+test("assessCheckStrength stays quiet for existence objective with existence check", () => {
+  const warnings = assessCheckStrength("generate report file", ["test -f report.json"]);
   assert.deepEqual(warnings, []);
 });

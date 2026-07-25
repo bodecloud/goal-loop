@@ -80,14 +80,13 @@ function deriveTrend(goal) {
     return goal.status;
   }
 
-  const recent = (Array.isArray(goal.progress) ? goal.progress : []).slice(-3);
-  if (recent.length < 2 || !recent.every((entry) => entry.ok === false)) {
-    return "progressing";
+  // Align with blocked detection: stuck means consecutive identical failure
+  // signatures, tracked by the hook — not merely shared exit codes.
+  const repeatCount = Number(goal.repeat_failure_count) || 0;
+  if (repeatCount >= 2) {
+    return "stuck";
   }
-  const signatures = recent.map((entry) =>
-    Array.isArray(entry.exit_codes) ? entry.exit_codes.join(",") : ""
-  );
-  return signatures.every((sig) => sig === signatures[0]) ? "stuck" : "progressing";
+  return "progressing";
 }
 
 function goalSummary(goal) {
