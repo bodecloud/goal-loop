@@ -1,0 +1,9 @@
+{
+  "name": "goal-loop",
+  "description": "Keep agents working until a shell check passes. Check-backed /goal loop with project-local state.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Bode Cloud"
+  },
+  "contextFileName": "GEMINI.md"
+}

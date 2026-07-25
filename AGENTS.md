@@ -2,7 +2,7 @@
 
 ## Project structure and module organization
 
-Goal Loop is a Cursor plugin packaged from the repository root. Plugin metadata lives in `.cursor-plugin/plugin.json`. User-facing command prompts are in `commands/`. The Cursor skill is in `skills/cursor-goal/`. The verifier helper agent prompt is in `agents/`. Runtime hook code is in `hooks/`. Shared CLI and state logic is in `scripts/`. Reusable JSON and rule templates are in `templates/`. Tests live in `tests/`. Documentation is split between `README.md`, `docs/`, and the static site under `site/`. Visual assets are in `assets/`.
+Goal Loop is a Cursor plugin packaged from the repository root. Plugin metadata lives in `.cursor-plugin/plugin.json`. User-facing command prompts are in `commands/`. The Cursor skill is in `skills/cursor-goal/`. The verifier helper agent prompt is in `agents/`. Runtime hook code is in `hooks/`. Shared CLI and state logic is in `scripts/`. Reusable JSON and rule templates are in `templates/`. Tests live in `tests/`. Documentation is split between `README.md`, `docs/`, and the static site under `site/`. Visual assets are in `assets/`. `docs/solutions/` holds documented solutions to past problems (bugs, best practices, workflow patterns), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`); it is relevant when implementing or debugging in an area someone has already worked through. `CONCEPTS.md` at the repository root holds the shared domain vocabulary (goal, check, stop hook, iteration, lifecycle states), useful when orienting to the codebase or naming things in docs and commits. `STRATEGY.md` records the product's target problem, approach, and current tracks.
 
 ## Build, test, and development commands
 

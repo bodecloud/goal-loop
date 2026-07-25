@@ -7,3 +7,5 @@ coverage/
 *.log
 agentdecompile_projects/
 .playwright-mcp/
+.compound-engineering/*.local.yaml
+!.compound-engineering/*.local.example.yaml

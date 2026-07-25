@@ -1,0 +1,27 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "goal-loop",
+  "description": "Goal Loop — check-backed /goal loops for coding agents",
+  "owner": {
+    "name": "Bode Cloud",
+    "email": "hello@bode.cloud"
+  },
+  "plugins": [
+    {
+      "name": "goal-loop",
+      "description": "Keep agents working until a shell check passes. Verifier-backed /goal, /plan, /goal-status, /goal-abort.",
+      "author": {
+        "name": "Bode Cloud"
+      },
+      "homepage": "https://github.com/bodecloud/goal-loop",
+      "source": "./",
+      "category": "development",
+      "tags": [
+        "goal",
+        "hooks",
+        "verification",
+        "automation"
+      ]
+    }
+  ]
+}
