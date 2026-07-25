@@ -99,7 +99,17 @@ Use the run logs to tell these apart:
 - repeated identical log output suggests no progress
 - noisy logs suggest the check needs refinement
 
-**What to do:** Improve the verifier or objective. Do not merely rerun the same loop.
+After enough consecutive identical failures (default 3), the hook enters `blocked` and stops continuing. That is intentional: an honest stop beats burning the remaining iteration budget.
+
+**What to do:** Inspect `blocked_reason` and the progress trail via `/goal-status`. Fix the root cause, then `/goal-resume`, or abort if the objective itself is wrong. Improve a weak check before restarting a long loop.
+
+## The goal is paused or blocked
+
+**Symptom:** `/goal-status` shows `paused` or `blocked`, and the agent is not continuing.
+
+**Likely cause:** Someone ran `/goal-pause`, or the hook earned `blocked` after repeated identical failures.
+
+**What to do:** Read the status trend and reason. Resume with `/goal-resume` when ready, or abort if you are done with the run.
 
 ## The goal aborts unexpectedly
 
@@ -171,7 +181,7 @@ Check for:
 - invalid integer fields
 - empty `verify.commands` on an active goal
 
-Valid statuses are `draft`, `active`, `completed`, and `aborted`.
+Valid statuses are `draft`, `active`, `paused`, `blocked`, `completed`, and `aborted`.
 
 **What to do:** Fix the JSON fields, or abort and start a fresh goal instead of hand-repairing a broken contract.
 

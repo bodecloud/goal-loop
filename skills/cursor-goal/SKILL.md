@@ -34,9 +34,9 @@ Do not work from memory when current loop state exists on disk.
 3. Keep changes focused on the objective and the configured check.
 4. If verification failed, find the root cause before making new speculative edits.
 5. Avoid repeating the same failed approach.
-6. If the same check error recurs, inspect deeper context or change tactics.
+6. If the same check error recurs, inspect deeper context or change tactics. After enough identical failures the hook may enter `blocked` — that is an honest stop, not success.
 7. Ask the user only for genuine blockers: missing secrets, unavailable services, destructive actions, or scope contradictions.
-8. If `.cursor/goal/progress.md` exists, update only checkboxes that are actually complete.
+8. If `.cursor/goal/progress.md` exists, update only checkboxes that are actually complete. The contract also keeps a bounded `progress` array inside `active.json` that `/goal-status` can skim.
 
 ## Failure-loop behavior
 
