@@ -3,6 +3,8 @@ import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import {
   ACTIVE_PATH,
+  appendProgressEntry,
+  computeFailureSignature,
   ensureGoalDirs,
   logPathForIteration,
   readJsonFile,
@@ -123,6 +125,17 @@ function tail(text, maxChars) {
   return text.slice(text.length - maxChars);
 }
 
+function primaryFailureReason(result) {
+  const failed = result.command_results.find((item) => !item.ok);
+  if (!failed) {
+    return "check failed";
+  }
+  if (failed.timed_out) {
+    return `timed out: ${failed.command}`;
+  }
+  return `exit ${failed.exit_code}: ${failed.command}`;
+}
+
 function buildFollowup(goal, result, logPath) {
   return `Goal Loop verification failed.
 
@@ -140,6 +153,29 @@ ${tail(result.combinedLog, MAX_FOLLOWUP_LOG_CHARS)}
 Read the log, fix the root cause, avoid repeating the same failed approach, and end the turn only when the implementation is ready for the hook to verify again. Do not declare success yourself; the Goal Loop hook is the authority.`;
 }
 
+function applyRepeatFailureTracking(goal, result) {
+  const signature = computeFailureSignature(result.exit_codes, result.combinedLog);
+  if (signature && signature === goal.last_failure_signature) {
+    goal.repeat_failure_count = (goal.repeat_failure_count || 0) + 1;
+  } else {
+    goal.last_failure_signature = signature;
+    goal.repeat_failure_count = 1;
+  }
+
+  const threshold =
+    typeof goal.limits.max_repeat_failures === "number" && goal.limits.max_repeat_failures > 0
+      ? goal.limits.max_repeat_failures
+      : 3;
+
+  if (goal.repeat_failure_count >= threshold) {
+    goal.status = "blocked";
+    goal.blocked_at = new Date().toISOString();
+    goal.blocked_reason = primaryFailureReason(result);
+    return true;
+  }
+  return false;
+}
+
 async function main() {
   try {
     const input = await readStdin();
@@ -155,6 +191,7 @@ async function main() {
     }
 
     const goal = validateGoal(rawGoal);
+    // paused, blocked, completed, aborted, draft — never run the check.
     if (goal.status !== "active") {
       printHookResult({});
       return;
@@ -193,15 +230,32 @@ async function main() {
       completed_at: new Date().toISOString()
     };
 
+    appendProgressEntry(goal, {
+      iteration: goal.iteration,
+      ok: result.ok,
+      exit_codes: result.exit_codes,
+      reason: result.ok ? "check passed" : primaryFailureReason(result),
+      log_path: logPath
+    });
+
     if (result.ok) {
       goal.status = "completed";
       goal.completed_at = new Date().toISOString();
+      goal.repeat_failure_count = 0;
+      goal.last_failure_signature = null;
       writeJsonFile(ACTIVE_PATH, goal);
       printHookResult({});
       return;
     }
 
+    const blocked = applyRepeatFailureTracking(goal, result);
     writeJsonFile(ACTIVE_PATH, goal);
+    if (blocked) {
+      // Honest stop — do not continue the agent.
+      printHookResult({});
+      return;
+    }
+
     printHookResult({
       followup_message: buildFollowup(goal, result, logPath)
     });
