@@ -1,0 +1,4 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["./.openclaw/skills/cursor-goal"]
+}
