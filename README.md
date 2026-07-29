@@ -133,11 +133,11 @@ rm -rf .cursor/goal/active.json .cursor/goal/draft.json .cursor/goal/runs/
 When changing the shared ruleset, keep the agent copies aligned:
 
 ```bash
-node scripts/check-rule-copies.js
+node scripts/check-rule-copies.cjs
 npm test
 ```
 
-The OpenClaw skill package (`.openclaw/skills/`) is generated from `skills/`; rerun `node scripts/build-openclaw-skills.js` after changing a skill, the test suite fails if it is stale. To publish the skills to ClawHub, run `clawhub login` once, then `node scripts/publish-openclaw-skills.js` (it publishes all skills at the `package.json` version; pass `--dry-run` to preview).
+The OpenClaw skill package (`.openclaw/skills/`) is generated from `skills/`; rerun `node scripts/build-openclaw-skills.cjs` after changing a skill, the test suite fails if it is stale. To publish the skills to ClawHub, run `clawhub login` once, then `node scripts/publish-openclaw-skills.cjs` (it publishes all skills at the `package.json` version; pass `--dry-run` to preview).
 
 ## FAQ
 
@@ -156,3 +156,13 @@ Yes. All checks run locally via the shell. No network calls are required for the
 ## License
 
 [MIT](LICENSE).
+
+## Star History
+
+<a href="https://www.star-history.com/bodecloud/goal-loop#history">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" src="https://api.star-history.com/chart?repos=bodecloud/goal-loop&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" src="https://api.star-history.com/chart?repos=bodecloud/goal-loop&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bodecloud/goal-loop&type=Date" />
+ </picture>
+</a>
