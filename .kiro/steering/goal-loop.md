@@ -1,3 +1,7 @@
+---
+inclusion: always
+---
+
 # Goal Loop — agent ruleset
 
 A shell check, not agent prose, decides when the work is done.

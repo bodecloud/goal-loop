@@ -1,0 +1,15 @@
+name: goal-loop
+description: Check-backed /goal autonomous loops backed by deterministic shell verification.
+version: "0.1.0"
+provides_hooks:
+  - pre_llm_call
+  - pre_gateway_dispatch
+provides_commands:
+  - goal
+  - plan
+  - goal-status
+  - goal-abort
+  - goal-pause
+  - goal-resume
+provides_skills:
+  - cursor-goal

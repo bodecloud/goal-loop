@@ -1,7 +1,7 @@
 {
   "name": "@bodecloud/goal-loop",
   "version": "0.1.0",
-  "description": "Codex-style autonomous goal loops for Cursor and other coding agents.",
+  "description": "Codex-style autonomous goal loops for Cursor and other coding agents. A shell check, not agent prose, decides when the work is done.",
   "type": "module",
   "private": false,
   "license": "MIT",
@@ -19,12 +19,27 @@
     "goal",
     "automation",
     "hooks",
-    "verification"
+    "verification",
+    "opencode-plugin",
+    "pi-package",
+    "skills",
+    "qoder",
+    "openclaw",
+    "clawhub"
   ],
   "files": [
     ".cursor-plugin/",
     ".claude-plugin/",
     ".plugin/",
+    ".openclaw/",
+    ".qoder-plugin/",
+    ".qoder/",
+    ".windsurf/",
+    ".clinerules/",
+    ".kiro/",
+    ".agents/",
+    ".github/",
+    ".cursor/",
     "agents/",
     "assets/",
     "commands/",
@@ -33,9 +48,11 @@
     "scripts/",
     "skills/",
     "templates/",
+    "plugin.yaml",
     "gemini-extension.json",
     "GEMINI.md",
     "README.md",
+    "AGENTS.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
@@ -44,7 +61,14 @@
     "validate": "node scripts/validate-plugin.mjs",
     "verify": "npm test && npm run validate",
     "docs:check": "node scripts/check-site.mjs",
-    "install:global": "node scripts/install-global.mjs"
+    "install:global": "node scripts/install-global.mjs",
+    "build:openclaw-skills": "node scripts/build-openclaw-skills.cjs",
+    "check-rule-copies": "node scripts/check-rule-copies.cjs",
+    "check-versions": "node scripts/check-versions.cjs",
+    "publish:openclaw-skills": "node scripts/publish-openclaw-skills.cjs"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=18"

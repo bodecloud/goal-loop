@@ -1,6 +1,24 @@
-# Goal Loop
+<p align="center">
+  <img src="assets/avatar.svg" width="220" alt="Goal Loop logo">
+</p>
 
-Goal Loop is a small Cursor plugin. It gives your agent a `/goal` command that keeps working until a shell check passes.
+<h1 align="center">Goal Loop</h1>
+
+<p align="center">
+  <em>A shell check, not agent prose, decides when the work is done.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/stars/bodecloud/goal-loop?style=flat-square&color=111111&label=stars" alt="Stars">
+  <img src="https://img.shields.io/github/v/release/bodecloud/goal-loop?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@bodecloud/goal-loop?style=flat-square&color=111111&label=npm" alt="npm">
+  <img src="https://img.shields.io/badge/works%20with-5%20agents-111111?style=flat-square" alt="Works with 5 agents">
+  <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
+</p>
+
+---
+
+Goal Loop is a small Cursor plugin and portable loop pattern. It gives your agent a `/goal` command that keeps working until a shell check passes.
 
 The product is intentionally small:
 
@@ -11,7 +29,18 @@ The product is intentionally small:
 
 Use it when you want an agent to keep going until `npm test`, `npm run build`, a smoke script, or another concrete command passes. Do not use it as a broad agent platform, a planning OS, or a marketplace of agent behaviors. That is outside what this project does.
 
-## What it does
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/goal <objective>` | Start an active check-backed goal loop. |
+| `/plan [objective]` | Draft objective and check before activation. |
+| `/goal-status` | Read the active goal and last check result. |
+| `/goal-abort` | Mark the active goal aborted, or remove it with `--remove`. |
+| `/goal-pause` | Pause the active goal; hook skips the check until resumed. |
+| `/goal-resume` | Resume a paused goal. |
+
+## How it works
 
 Goal Loop turns a normal objective into a bounded loop:
 
@@ -26,285 +55,104 @@ That is the whole product.
 
 It does not invent new agent thinking. It does not prove more than your check covers. It does not replace good scoping, good tests, or your own judgment.
 
-## Why it exists
-
-Most agent loops fail in one of two ways:
-
-- The agent stops too early because the work "looks done".
-- You have to keep saying "continue" after every failed test or build.
-
-Goal Loop fixes both by moving the "is it done?" decision out of the assistant's narrative and into a shell check that can run on every turn.
-
-That makes it useful for:
-
-- Build repair
-- Focused test repair
-- Static checks
-- Smoke probes
-- File existence or output generation proof
-- Any other bounded task where a shell command can decide pass or fail
-
-## What it does not do
-
-Goal Loop is not:
-
-- A general autonomous agent platform
-- A task graph or multi-agent system
-- A deployment system
-- A replacement for CI
-- A promise of semantic correctness
-- A promise that an agent will succeed without a good check
-
-v0.1.0 is deliberately conservative. It solves one problem well: keep an agent iterating until a real check passes, or until the loop stops.
-
-## How to think about it
-
-Treat Goal Loop as a local, inspectable contract between four pieces:
-
-- You: choose the objective and the check
-- The commands: write or inspect goal state
-- The stop hook: runs the check after each turn
-- The agent: does the work, but is not trusted to declare itself done
-
-The contract lives in the project, not in the plugin install directory. That keeps state visible, reviewable, and easy to reuse in other wrappers.
-
-## Runtime layout
-
-Goal Loop stores mutable state in the active project:
-
-```text
-.cursor/goal/
-├── active.json
-├── draft.json
-├── defaults.json
-├── progress.md
-└── runs/
-```
-
-- `active.json`: the live goal contract used by the stop hook
-- `draft.json`: a planned but not activated goal
-- `defaults.json`: shared check defaults that a repo can commit
-- `progress.md`: optional human-readable checklist
-- `runs/`: check logs and hook error logs
-
-Recommended git treatment:
-
-- Commit `defaults.json` if the repo has a stable shared check
-- Ignore `active.json`, `draft.json`, and `runs/`
-- Keep `progress.md` optional and project-specific
-
 ## Install
 
-### Cursor Marketplace
+The most effort Goal Loop will ever ask of you:
 
-After marketplace publication:
+### Cursor
 
 ```text
 /add-plugin goal-loop
 ```
 
-This repository does not prove current marketplace publication state. It documents the intended install path if publication exists.
-
-### Local development install
-
-```bash
-git clone https://github.com/bodecloud/goal-loop.git
-cd goal-loop
-```
-
-For Cursor Agent CLI experiments:
+After marketplace publication. For local development with Cursor Agent CLI:
 
 ```bash
 cursor-agent --plugin-dir "$PWD" --workspace /path/to/your/project
 ```
 
-For Cursor IDE local development, use Cursor's current local plugin workflow. This repository documents the plugin shape and local CLI loading path directly. It does not independently prove the current IDE-side local-plugin UX.
-
-### Docs site
-
-Install-oriented docs are published to GitHub Pages:
-
-https://bodecloud.github.io/goal-loop/
-
-## Quick start
-
-1. Enable Cursor Agent Auto-run if you want unattended continuation.
-2. Optionally define a project default check in `.cursor/goal/defaults.json`:
-
-   ```json
-   {
-     "verify": {
-       "commands": ["npm run build"],
-       "cwd": ".",
-       "timeout_ms": 600000
-     },
-     "limits": {
-       "max_iterations": 20,
-       "max_wall_ms": 7200000
-     }
-   }
-   ```
-
-3. Start a goal with an explicit check:
-
-   ```text
-   /goal Fix the failing auth tests --verify "npm test -- --testPathPattern=auth"
-   ```
-
-4. Let the agent work.
-5. After each finished turn, Goal Loop reruns the check.
-6. Use `/goal-status` to inspect current state.
-7. Use `/goal-abort` to stop the loop early.
-
-## Commands
-
-| Command | Purpose |
-| --- | --- |
-| `/goal <objective>` | Start an active check-backed goal loop. |
-| `/plan [objective]` | Draft objective and check before activation. |
-| `/goal-status` | Read the active goal and last check result. |
-| `/goal-abort` | Mark the active goal aborted, or remove it with `--remove`. |
-
-## Lifecycle
-
-### `/goal`
-
-The command handler:
-
-- parses the objective
-- collects `--verify` commands
-- falls back to `.cursor/goal/defaults.json` if no check is passed
-- writes `.cursor/goal/active.json`
-- tells the agent to load the `cursor-goal` skill
-
-### Agent turn
-
-The agent works on the objective using the active goal contract as its source of truth.
-
-### Stop hook
-
-At the end of a finished turn, Cursor runs:
+### Claude Code
 
 ```bash
-node ${CURSOR_PLUGIN_ROOT}/hooks/goal-stop.mjs
+claude plugin install @bodecloud/goal-loop
 ```
 
-The hook:
+Or use Git hooks directly: copy `hooks/hooks-claude.json` into `~/.claude/hooks.json` and `hooks/goal-stop-claude.sh` into your PATH. Goal Loop reads `.cursor/goal/active.json` from the project root, the same file Cursor uses, so the loop state is portable across hosts.
 
-- ignores stop events that are not `completed`
-- reads and validates `.cursor/goal/active.json`
-- increments `iteration`
-- aborts if iteration or wall-clock limits are exceeded
-- runs check commands one after another
-- writes a run log
-- updates `last_verify`
-- returns `{}` on success
-- returns `{ "followup_message": "..." }` on failure
+### OpenClaw
 
-### Continuation
+```bash
+clawhub install goal-loop
+```
 
-If Auto-run is enabled, Cursor submits the `followup_message` as the next instruction. Without Auto-run, Goal Loop still checks honestly, but you may need to continue by hand.
+Installs Goal Loop as an OpenClaw skill from ClawHub. OpenClaw applies it on coding tasks and exposes the `/goal` commands. Without ClawHub, copy `.openclaw/skills/` into `~/.openclaw/skills/`.
 
-## How to choose a check
+### Codex
 
-Goal Loop is only as good as the check you choose.
+```bash
+codex plugin install @bodecloud/goal-loop
+```
 
-Good checks are:
+Goal Loop uses the same `.cursor/goal/` state files that Cursor uses, so the contract is portable across editors and CLI agents.
 
-- repeatable
-- local to the stated objective
-- cheap enough to rerun every turn
-- strong enough to prove the intended result
+### Gemini CLI
 
-Examples:
+```bash
+gemini extensions install https://github.com/bodecloud/goal-loop
+```
 
-- `npm run build`
-- `npm test -- --testPathPattern=auth`
-- `cargo test login_flow`
-- `test -f generated/output.json`
-- `scripts/smoke-check.sh`
+Loads the ruleset as always-on context every session. The `skills/` ship too when a task needs them.
 
-Bad checks are:
+### Qoder
 
-- vague promises that cannot fail mechanically
-- commands unrelated to the user's actual request
-- massive, flaky end-to-end suites for tiny local changes, unless they are truly the right gate
-- checks that pass while the real failure surface remains untested
+Qoder auto-loads `AGENTS.md` from the repo root as always-on context, so running Goal Loop from a checkout works with zero setup. For per-project rules, copy `.qoder/rules/goal-loop.md` into your project's `.qoder/rules/`.
 
-The loop does not fix a weak check. It only reruns it faithfully.
+### Copilot CLI / VS Code
 
-## Safety model
+Copy `AGENTS.md` into your project root. For the CLI, copy `.github/copilot-instructions.md` into your project. The stop-hook adapter (`hooks/goal-stop-claude.sh`) works for Claude Code, Grok, and Copilot CLI.
 
-Goal Loop uses multiple guardrails:
+Which files map to which agent: [Adapting Goal Loop to other agents](docs/other-agents.md).
 
-- `hooks/hooks.json` sets `loop_limit: 20`
-- `active.json` sets `limits.max_iterations`
-- `active.json` sets `limits.max_wall_ms`
-- each check command has `verify.timeout_ms`
-- hook crashes fail open by returning `{}` and writing `hook-errors.log`
+## Uninstall
 
-That last point is intentional: a broken hook should not trap the agent in a bad loop.
+| Host | Command |
+|------|---------|
+| Cursor | Remove the plugin from Cursor settings |
+| Claude Code | `claude plugin remove goal-loop` |
+| OpenClaw | `clawhub uninstall goal-loop` |
+| Cursor / Codex / Qoder / Copilot / Gemini | Delete the copied rule file |
 
-## What Goal Loop does in v0.1.0
+These remove the plugin's own files. They leave behind project-local state in `.cursor/goal/`. To clean that up:
 
-In scope:
-
-- check-backed `/goal` loop
-- draft and status commands
-- project-local JSON contract
-- stop hook continuation via `followup_message`
-- portable pattern for other agents
-
-Not in scope:
-
-- richer planner workflows
-- multiple simultaneous active goals
-- semantic diff understanding
-- custom UI dashboards
-- non-shell check backends
-- distributed multi-agent systems
-
-## Documentation map
-
-- [Documentation index](docs/index.md)
-- [Cursor setup and operating guide](docs/cursor.md)
-- [Goal contract and schema](docs/goal-contract.md)
-- [How to design a check](docs/verifier-design.md)
-- [Implementation evidence map](docs/evidence-map.md)
-- [Examples and usage patterns](docs/examples.md)
-- [Operator checklists](docs/operator-checklists.md)
-- [Reviewer guide](docs/reviewer-guide.md)
-- [Documentation authoring standard](docs/authoring-standard.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Decision guide and FAQ](docs/faq.md)
-- [Adoption playbook](docs/adoption-playbook.md)
-- [Adapting the pattern to other agents](docs/other-agents.md)
-
-## What this repo proves, and what it doesn't
-
-What this repository directly proves:
-
-- current plugin manifest shape
-- current command, hook, and state-file behavior
-- current test-covered loop behavior in this repo
-- current static documentation site structure and local serving behavior
-
-What it does not directly prove:
-
-- current marketplace publication state
-- current Cursor IDE local-plugin UX beyond the repo-documented plugin shape
-- that any chosen check is enough for every human request
-- exact conformance to any external guide that is not present in this repo
+```bash
+rm -rf .cursor/goal/active.json .cursor/goal/draft.json .cursor/goal/runs/
+```
 
 ## Development
 
+When changing the shared ruleset, keep the agent copies aligned:
+
 ```bash
+node scripts/check-rule-copies.js
 npm test
-npm run validate
-npm run docs:check
-npm run verify
 ```
+
+The OpenClaw skill package (`.openclaw/skills/`) is generated from `skills/`; rerun `node scripts/build-openclaw-skills.js` after changing a skill, the test suite fails if it is stale. To publish the skills to ClawHub, run `clawhub login` once, then `node scripts/publish-openclaw-skills.js` (it publishes all skills at the `package.json` version; pass `--dry-run` to preview).
+
+## FAQ
+
+**Can I use Goal Loop with other agents?**
+Yes. The core pattern is portable: keep goal state in a project-local JSON file, run a check after each finished turn, continue only when that check fails, and stop when it passes. See [Adapting Goal Loop to other agents](docs/other-agents.md).
+
+**What check should I use?**
+`npm test`, `npm run build`, or any other shell command whose exit code decides pass or fail. Good checks are repeatable, local to the stated objective, cheap enough to rerun every turn, and strong enough to prove the intended result. See [How to design a check](docs/verifier-design.md).
+
+**What happens if the hook crashes?**
+Goal Loop fails open: a crashed hook returns `{}` (stop, no continuation) instead of trapping the agent in a loop. The error is written to `.cursor/goal/runs/hook-errors.log`.
+
+**Does Goal Loop work offline?**
+Yes. All checks run locally via the shell. No network calls are required for the core loop.
 
 ## License
 
-MIT
+[MIT](LICENSE).

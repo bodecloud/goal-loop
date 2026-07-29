@@ -2,7 +2,7 @@
   "name": "goal-loop",
   "displayName": "Goal Loop",
   "version": "0.1.0",
-  "description": "Codex-style /goal autonomous loops for Cursor, backed by deterministic shell verification.",
+  "description": "Check-backed /goal autonomous loops for Cursor and other coding agents, backed by deterministic shell verification.",
   "author": {
     "name": "Bode Cloud"
   },
@@ -16,13 +16,16 @@
     "loop",
     "verification",
     "cursor",
-    "agent"
+    "agent",
+    "opencode-plugin",
+    "skills"
   ],
   "category": "developer-tools",
   "tags": [
     "automation",
     "hooks",
-    "verification"
+    "verification",
+    "goal"
   ],
   "commands": "./commands/",
   "skills": "./skills/",

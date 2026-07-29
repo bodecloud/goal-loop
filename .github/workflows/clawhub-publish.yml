@@ -1,0 +1,28 @@
+name: ClawHub Publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build:openclaw-skills
+      - run: npm run check-rule-copies
+      - run: npm run check-versions
+      - run: npm run test
+      - name: Publish skills to ClawHub
+        run: npm run publish:openclaw-skills
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}

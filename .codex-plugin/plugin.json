@@ -1,6 +1,7 @@
 {
   "name": "goal-loop",
   "version": "0.1.0",
+  "displayName": "Goal Loop",
   "description": "Check-backed /goal autonomous loops backed by deterministic shell verification.",
   "author": {
     "name": "Bode Cloud"
@@ -13,5 +14,6 @@
     "autonomous",
     "loop",
     "verification"
-  ]
+  ],
+  "capabilities": ["commands", "skills", "agents", "hooks"]
 }

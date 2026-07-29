@@ -1,0 +1,27 @@
+{
+  "$schema": "https://developer.github.com/schema/copilot-extension/v2/marketplace.json",
+  "name": "goal-loop",
+  "description": "Check-backed /goal autonomous loops backed by deterministic shell verification.",
+  "owner": {
+    "name": "Bode Cloud",
+    "email": "hello@bode.cloud"
+  },
+  "extensions": [
+    {
+      "name": "goal-loop",
+      "description": "Keep agents working until a shell check passes. Verifier-backed /goal, /plan, /goal-status, /goal-abort, /goal-pause, /goal-resume.",
+      "author": {
+        "name": "Bode Cloud"
+      },
+      "homepage": "https://github.com/bodecloud/goal-loop",
+      "source": "./",
+      "category": "development",
+      "tags": [
+        "goal",
+        "hooks",
+        "verification",
+        "automation"
+      ]
+    }
+  ]
+}
