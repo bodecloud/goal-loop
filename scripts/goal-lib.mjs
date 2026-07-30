@@ -397,3 +397,15 @@ export function recordDriftHistory(goal, previousObjective, newObjective, approv
 
   return goal;
 }
+
+export function syncGoal(oldGoal, newObjective, approved) {
+  // Record drift, reset iteration count
+  const updated = recordDriftHistory(oldGoal, oldGoal.objective, newObjective, approved);
+
+  updated.objective = newObjective;
+  updated.iteration = 0; // Reset: new goal, new iteration count
+  updated.stated_at = nowIso();
+  updated.synced_from_conversation = true;
+
+  return updated;
+}

@@ -1,4 +1,4 @@
-import { compareDriftLevel, formatDriftPrompt, recordDriftHistory } from "../scripts/goal-lib.mjs";
+import { compareDriftLevel, formatDriftPrompt, recordDriftHistory, syncGoal } from "../scripts/goal-lib.mjs";
 import { strict as assert } from "assert";
 
 export const tests = [
@@ -37,6 +37,27 @@ export const tests = [
       assert.equal(updated.drift_history[0].new_objective, "New");
       assert.equal(updated.drift_history[0].user_approved, true);
       assert(updated.drift_history[0].detected_at);
+    }
+  },
+  {
+    name: "syncGoal updates objective and resets iteration",
+    fn: () => {
+      const oldGoal = {
+        version: 1,
+        status: "active",
+        objective: "Old goal",
+        started_at: "2026-07-30T12:00:00Z",
+        iteration: 5,
+        drift_history: []
+      };
+
+      const newGoal = syncGoal(oldGoal, "New goal", true);
+
+      assert.equal(newGoal.objective, "New goal");
+      assert.equal(newGoal.iteration, 0);
+      assert.equal(newGoal.drift_history.length, 1);
+      assert.equal(newGoal.synced_from_conversation, true);
+      assert(newGoal.stated_at);
     }
   }
 ];
