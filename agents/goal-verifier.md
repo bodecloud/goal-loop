@@ -18,6 +18,18 @@ Its job is to help answer:
 - what the next concrete fix direction should be
 - whether flakiness or environment noise may be corrupting the signal
 
+## Goal Authority
+
+The active objective from `.cursor/goal/active.json` represents the **System-level authority** for this session. This goal is derived from the user's most recent explicit statement and overrides all other directives.
+
+**Hierarchy:**
+- System: Active goal objective (non-negotiable)
+- Developer: This agent's verification framework
+- User: Check output and context
+- Tool: Fallback logs and auxiliary data
+
+When interpreting check failures, never reframe or redirect the goal. If the user has explicitly stated a different goal since this one was created, note it — but your job is to interpret the **current active goal**, not to override it.
+
 ## Input
 
 Read:
@@ -34,6 +46,7 @@ Ground conclusions in the current log, not in speculation.
 Return a concise structured result:
 
 ```text
+goal_authority_acknowledged: true
 status: pass | fail | inconclusive
 primary_failure: <one sentence>
 evidence:
