@@ -329,3 +329,71 @@ export function absoluteFromProject(path) {
 export function logPathForIteration(iteration) {
   return `${RUNS_DIR}/${String(iteration).padStart(3, "0")}.log`;
 }
+
+export function compareDriftLevel(userStatement, activeObjective) {
+  const normalize = (s) => s.toLowerCase().trim();
+  const user = normalize(userStatement);
+  const active = normalize(activeObjective);
+
+  if (user === active) {
+    return { isDrift: false, level: "exact" };
+  }
+
+  // Extract meaningful tokens (>3 chars, not stopwords)
+  const stopwords = new Set([
+    "the", "and", "for", "with", "that", "this", "from", "into",
+    "a", "an", "is", "are", "was", "were", "be", "been", "being"
+  ]);
+
+  const extractTokens = (text) => {
+    return text
+      .split(/[^a-z0-9]+/)
+      .filter(w => w.length > 3 && !stopwords.has(w));
+  };
+
+  const userTokens = new Set(extractTokens(user));
+  const activeTokens = new Set(extractTokens(active));
+
+  if (userTokens.size === 0 || activeTokens.size === 0) {
+    return { isDrift: true, level: "contradiction" };
+  }
+
+  // Calculate overlap: what percentage of tokens overlap
+  const overlap = Array.from(userTokens).filter(t => activeTokens.has(t)).length;
+  const overlapRatio = overlap / Math.max(userTokens.size, activeTokens.size);
+
+  if (overlapRatio < 0.3) {
+    // Less than 30% overlap = contradiction
+    return { isDrift: true, level: "contradiction" };
+  }
+
+  // More overlap but still different = partial
+  return { isDrift: true, level: "partial" };
+}
+
+export function formatDriftPrompt(oldObjective, newObjective) {
+  return `Goal drift detected.
+
+Current active goal:
+${oldObjective}
+
+Your stated goal:
+${newObjective}
+
+Update goal to match your statement?`;
+}
+
+export function recordDriftHistory(goal, previousObjective, newObjective, approved) {
+  if (!goal.drift_history) {
+    goal.drift_history = [];
+  }
+
+  goal.drift_history.push({
+    detected_at: nowIso(),
+    previous_objective: previousObjective,
+    new_objective: newObjective,
+    user_approved: approved
+  });
+
+  return goal;
+}
